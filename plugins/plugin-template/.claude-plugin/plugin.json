@@ -1,0 +1,8 @@
+{
+  "name": "plugin-template",
+  "version": "1.0.0",
+  "description": "插件模板，新建插件时复制此目录",
+  "author": {
+    "name": "voidmind"
+  }
+}

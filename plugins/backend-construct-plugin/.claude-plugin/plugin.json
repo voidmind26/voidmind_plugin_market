@@ -1,0 +1,9 @@
+{
+  "name": "backend-construct-plugin",
+  "version": "0.2.0",
+  "description": "后端 plan 阶段统一入口插件，提供标签驱动计划与复杂任务辅助",
+  "author": {
+    "name": "voidmind",
+    "email": "voidmind@zuoyebang.cc"
+  }
+}

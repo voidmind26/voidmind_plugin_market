@@ -1,0 +1,6 @@
+I need to optimize the brainstorming skill in this plugin.
+
+The repository already has a standard spec location under docs/superpowers/specs.
+Use existing repository conventions.
+Ask questions only if the business definition is unclear or if there are mutually exclusive implementation options.
+If the norms are already clear, write the complete spec directly and then give me only a short summary for review.
