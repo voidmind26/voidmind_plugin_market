@@ -10,20 +10,26 @@
    - 禁止：不要把它当成最终写入 path 的强制前缀。
 
 2. `fullRoute`
-   - 含义：从 router 实际还原出的完整路由，例如 `/api/user/profile`。
+   - 含义：从 router 实际还原出的完整路由，例如 `/zybuosmis/flowconfig/create`。
    - 用途：作为 router、controller、handler 的代码定位证据。
-   - 禁止：不要直接把 fullRoute 原样写入 Apifox。
+   - 禁止：不要直接把包含部署前缀的 fullRoute 原样写入 Apifox。
 
-3. `apiPath`
-   - 含义：写入 Apifox 的最终接口路径，只保留接口自身路径语义，例如 `/profile`。
+3. `routeMountPath`
+   - 含义：去掉部署前缀后的真实业务路由，例如 `/flowconfig/create`。
+   - 用途：作为 Apifox path 的默认来源。
+   - 要求：必须保留业务模块前缀，不得裁成只剩 `/create`。
+
+4. `apifoxPath`
+   - 含义：写入 Apifox 的最终接口路径。
    - 用途：Apifox `path` 字段唯一合法来源。
-   - 要求：生成到 Apifox 时，`path = apiPath`，不要额外拼回 `routePrefix` 或 `fullRoute`。
+   - 要求：默认 `apifoxPath = routeMountPath`；只允许裁掉部署前缀，不允许裁掉业务模块前缀。
 
 简化理解：
 
 - `routePrefix` 用来决定“扫哪里”
 - `fullRoute` 用来证明“代码里在哪里”
-- `apiPath` 用来决定“Apifox 里写什么”
+- `routeMountPath` 用来表达“真实业务路由是什么”
+- `apifoxPath` 用来决定“Apifox 里写什么”
 
 ## 1.1 模块与测试环境约束
 
@@ -66,7 +72,7 @@
 先创建接口骨架，只放最小必需字段：
 
 - method
-- path（只传 `apiPath`）
+- path（只传 `apifoxPath`，默认等于 `routeMountPath`）
 - title 或最小接口名
 
 目标不是一次成型，而是先拿到可读、可更新的接口实体。
@@ -177,7 +183,7 @@
 
 最终写入结果至少满足：
 
-- `path` 只等于 `apiPath`
+- `path` 只等于 `apifoxPath`，默认等于 `routeMountPath`
 - 新增接口已落在目标模块，不在默认模块
 - 测试环境已存在该模块地址
 - 已按固定顺序完成写入或缩圈

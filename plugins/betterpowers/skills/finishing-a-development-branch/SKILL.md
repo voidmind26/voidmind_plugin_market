@@ -1,6 +1,6 @@
 ---
 name: finishing-a-development-branch
-description: Use when implementation is complete, all tests pass, and you need to decide how to integrate the work - guides completion of development work by presenting structured options for merge, PR, or cleanup
+description: Use when implementation appears complete and you need to decide whether to merge it, open a PR, keep the branch, or discard the work
 ---
 
 # Finishing a Development Branch
@@ -9,7 +9,7 @@ description: Use when implementation is complete, all tests pass, and you need t
 
 Guide completion of development work by presenting clear options and handling chosen workflow.
 
-**Core principle:** Verify tests → Detect environment → Present options → Execute choice → Clean up.
+**Core principle:** Verify tests → Resolve target repository → Detect environment → Present options → Execute choice → Clean up.
 
 **Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
 
@@ -37,13 +37,24 @@ Stop. Don't proceed to Step 2.
 
 **If tests pass:** Continue to Step 2.
 
-### Step 2: Detect Environment
+### Step 2: Resolve Target Repository and Detect Environment
 
-**Determine workspace state before presenting options:**
+**Before presenting options, resolve which repository this task is actually about.**
+
+Use this priority order:
+1. If the current task already names or clearly points to a repository, use that repository.
+2. Otherwise, if the current directory is already inside a git repository, use that repository.
+3. Otherwise, look for git repositories under the current directory.
+4. If that discovery finds exactly one candidate, use it.
+5. If the repository is still ambiguous or no candidate exists, ask the user which repository to use. Do not guess.
+
+**All later git commands in this skill should run against that target repository, even if your session started from a parent directory.**
+
+Once the target repository is known, determine workspace state before presenting options:
 
 ```bash
-GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
-GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
+GIT_DIR=$(cd "$(git -C "$TARGET_REPO" rev-parse --git-dir)" 2>/dev/null && pwd -P)
+GIT_COMMON=$(cd "$(git -C "$TARGET_REPO" rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
 ```
 
 This determines which menu to show and how cleanup works:
@@ -54,24 +65,35 @@ This determines which menu to show and how cleanup works:
 | `GIT_DIR != GIT_COMMON`, named branch | Standard 4 options | Provenance-based (see Step 6) |
 | `GIT_DIR != GIT_COMMON`, detached HEAD | Reduced 3 options (no merge) | No cleanup (externally managed) |
 
-### Step 3: Determine Base Branch
+### Step 3: Determine Base Branch and Output Branch
+
+Before presenting completion options, identify both branch roles explicitly:
+- **Base branch:** the branch this work should merge back into
+- **Output branch:** the branch that currently contains the implementation work
 
 ```bash
-# Try common base branches
-git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
+# Base branch guess aid
+git -C "$TARGET_REPO" merge-base HEAD main 2>/dev/null || git -C "$TARGET_REPO" merge-base HEAD master 2>/dev/null
+
+# Output branch
+git -C "$TARGET_REPO" branch --show-current
 ```
 
-Or ask: "This branch split from main - is that correct?"
+If either branch is unclear, ask directly instead of guessing.
 
 ### Step 4: Present Options
 
 **Normal repo and named-branch worktree — present exactly these 4 options:**
 
 ```
-Implementation complete. What would you like to do?
+Implementation complete.
+Base branch: <base-branch>
+Output branch: <output-branch>
+
+What would you like to do?
 
 1. Merge back to <base-branch> locally
-2. Push and create a Pull Request
+2. Push and create a Pull Request from <output-branch>
 3. Keep the branch as-is (I'll handle it later)
 4. Discard this work
 
@@ -82,6 +104,8 @@ Which option?
 
 ```
 Implementation complete. You're on a detached HEAD (externally managed workspace).
+Base branch: <base-branch>
+Output branch: <output-branch>
 
 1. Push as new branch and create a Pull Request
 2. Keep as-is (I'll handle it later)
@@ -98,18 +122,18 @@ Which option?
 
 ```bash
 # If the worktree still has uncommitted changes, commit them there first
-git status --short
-git add <files>
-git commit -m "<message>"
+git -C "$TARGET_REPO" status --short
+git -C "$TARGET_REPO" add <files>
+git -C "$TARGET_REPO" commit -m "<message>"
 
 # Get main repo root for CWD safety
-MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
+MAIN_ROOT=$(git -C "$TARGET_REPO" -C "$(git -C "$TARGET_REPO" rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
 cd "$MAIN_ROOT"
 
 # Merge first — verify success before removing anything
 git checkout <base-branch>
 git pull
-git merge <feature-branch>
+git merge <output-branch>
 # Or cherry-pick specific commits if that's the intended integration shape
 
 # Verify tests on merged result
@@ -121,14 +145,14 @@ git merge <feature-branch>
 Then: Cleanup worktree (Step 6), then delete branch:
 
 ```bash
-git branch -d <feature-branch>
+git branch -d <output-branch>
 ```
 
 #### Option 2: Push and Create PR
 
 ```bash
 # Push branch
-git push -u origin <feature-branch>
+git push -u origin <output-branch>
 
 # Create PR
 gh pr create --title "<title>" --body "$(cat <<'EOF'
@@ -145,7 +169,7 @@ EOF
 
 #### Option 3: Keep As-Is
 
-Report: "Keeping branch <name>. Worktree preserved at <path>."
+Report: "Keeping output branch <output-branch>. Worktree preserved at <path>."
 
 **Don't cleanup worktree.**
 
@@ -154,7 +178,7 @@ Report: "Keeping branch <name>. Worktree preserved at <path>."
 **Confirm first:**
 ```
 This will permanently delete:
-- Branch <name>
+- Output branch <output-branch>
 - All commits: <commit-list>
 - Worktree at <path>
 
@@ -165,13 +189,13 @@ Wait for exact confirmation.
 
 If confirmed:
 ```bash
-MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
+MAIN_ROOT=$(git -C "$TARGET_REPO" -C "$(git -C "$TARGET_REPO" rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
 cd "$MAIN_ROOT"
 ```
 
 Then: Cleanup worktree (Step 6), then force-delete branch:
 ```bash
-git branch -D <feature-branch>
+git branch -D <output-branch>
 ```
 
 ### Step 6: Cleanup Workspace
@@ -179,9 +203,9 @@ git branch -D <feature-branch>
 **Only runs for Options 1 and 4.** Options 2 and 3 always preserve the worktree.
 
 ```bash
-GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
-GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
-WORKTREE_PATH=$(git rev-parse --show-toplevel)
+GIT_DIR=$(cd "$(git -C "$TARGET_REPO" rev-parse --git-dir)" 2>/dev/null && pwd -P)
+GIT_COMMON=$(cd "$(git -C "$TARGET_REPO" rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
+WORKTREE_PATH=$(git -C "$TARGET_REPO" rev-parse --show-toplevel)
 ```
 
 **If `GIT_DIR == GIT_COMMON`:** Normal repo, no worktree to clean up. Done.
@@ -189,7 +213,7 @@ WORKTREE_PATH=$(git rev-parse --show-toplevel)
 **If worktree path is under `.worktrees/`, `worktrees/`, or `~/.config/superpowers/worktrees/`:** Superpowers created this worktree — we own cleanup.
 
 ```bash
-MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
+MAIN_ROOT=$(git -C "$TARGET_REPO" -C "$(git -C "$TARGET_REPO" rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
 cd "$MAIN_ROOT"
 git worktree remove "$WORKTREE_PATH"
 git worktree prune  # Self-healing: clean up any stale registrations
@@ -207,6 +231,10 @@ git worktree prune  # Self-healing: clean up any stale registrations
 | 4. Discard | - | - | - | yes (force) |
 
 ## Common Mistakes
+
+**Assuming the open folder is the task repo**
+- **Problem:** Parent folders can contain multiple repositories, so environment detection or cleanup runs against the wrong repo
+- **Fix:** Resolve the target repository from task context first; if still ambiguous, ask the user
 
 **Skipping test verification**
 - **Problem:** Merge broken code, create failing PR
@@ -244,6 +272,7 @@ git worktree prune  # Self-healing: clean up any stale registrations
 
 **Never:**
 - Proceed with failing tests
+- Guess which repository the task means when context is still ambiguous
 - Merge without verifying tests on result
 - Delete work without confirmation
 - Force-push without explicit request
@@ -253,6 +282,8 @@ git worktree prune  # Self-healing: clean up any stale registrations
 
 **Always:**
 - Verify tests before offering options
+- Resolve the task's target repository before running git commands
+- Ask the user if the target repository is still ambiguous
 - Detect environment before presenting menu
 - Present exactly 4 options (or 3 for detached HEAD)
 - Get typed confirmation for Option 4

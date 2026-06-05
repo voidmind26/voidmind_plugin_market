@@ -26,6 +26,30 @@ else
     exit 1
 fi
 
+if assert_contains "$output" "persistent implementer\|fixed-role\|fixed role" "Mentions persistent role model"; then
+    : # pass
+else
+    exit 1
+fi
+
+if assert_contains "$output" "spec-reviewer\|spec reviewer" "Mentions persistent spec reviewer"; then
+    : # pass
+else
+    exit 1
+fi
+
+if assert_contains "$output" "code-quality-reviewer\|code quality reviewer" "Mentions persistent code quality reviewer"; then
+    : # pass
+else
+    exit 1
+fi
+
+if assert_not_contains "$output" "fresh subagent per task" "Does not present fresh-per-task as core model"; then
+    : # pass
+else
+    exit 1
+fi
+
 echo ""
 
 # Test 2: Verify skill describes correct workflow order

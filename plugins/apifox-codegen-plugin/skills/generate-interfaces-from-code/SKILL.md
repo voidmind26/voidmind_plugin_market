@@ -70,9 +70,10 @@ allowed-tools:
 ```json
 {
   "method": "GET",
-  "fullRoute": "/api/user/profile",
-  "apiPath": "/profile",
-  "interfaceName": "获取用户资料",
+  "fullRoute": "/zybuosmis/flowconfig/generate_profile_id",
+  "routeMountPath": "/flowconfig/generate_profile_id",
+  "apifoxPath": "/flowconfig/generate_profile_id",
+  "interfaceName": "生成 Profile ID",
   "request": {},
   "response": {},
   "descriptionDraft": "根据代码行为整理出的说明草案"
@@ -88,7 +89,9 @@ allowed-tools:
 抽取结果至少覆盖以下字段：
 
 - `method`
-- `apiPath`
+- `fullRoute`
+- `routeMountPath`
+- `apifoxPath`
 - `interfaceName`
 - `request`
 - `response`
@@ -96,9 +99,10 @@ allowed-tools:
 
 遵守以下约束：
 
-- 扫描时可以保留 `fullRoute` 作为证据。
-- 生成到 Apifox 时，`path` 只保留 `apiPath`。
-- `apiPath` 不携带用于扫描的公共前缀。
+- `fullRoute`：完整代码路由，仅作为取证依据，可能包含部署前缀。
+- `routeMountPath`：去掉部署前缀后的真实业务路由，保留 router group 语义，例如 `/flowconfig/create`。
+- `apifoxPath`：写入 Apifox 的最终 path，默认应与 `routeMountPath` 一致。
+- 只有部署前缀（如 `/zybuosmis`）可以裁掉；业务模块前缀（如 `/flowconfig`、`/serverconfig`、`/hpaconfig`）必须保留。
 - 接口说明优先取注释；缺注释时，再依据代码约定整理草案。
 
 ## Apifox Write Procedure
@@ -115,7 +119,8 @@ allowed-tools:
 2. 最小创建。
    - 用 `createHttpEndpoint` 创建接口骨架。
    - 只提交最小可成立字段：`method`、`name`、`path`、`type=http`、`moduleId`。
-   - `path` 仅传 `apiPath`。
+   - `path` 必须传 `apifoxPath`，默认等于 `routeMountPath`。
+   - 不要把业务模块前缀裁成只剩末级 path；例如应写 `/flowconfig/create`，而不是 `/create`。
    - 创建时显式使用已确认的目标模块，不允许默认落到默认模块。
 
 3. 读取详情。

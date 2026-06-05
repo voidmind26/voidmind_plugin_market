@@ -1,0 +1,8 @@
+{
+  "name": "code-index-plugin",
+  "version": "0.1.2",
+  "description": "为当前项目构建本地代码索引并提供搜索、刷新、状态查询的 Claude Code 插件。",
+  "author": {
+    "name": "voidmind"
+  }
+}

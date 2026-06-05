@@ -36,6 +36,7 @@ allowed-tools:
 - 如果标签未覆盖某层，plan 不得为该层创建默认任务。
 - plan 必须显式列出涉及层与不涉及层。
 - 验证步骤按命中层裁剪。
+- 若计划涉及测试、补测、E2E、集成验证或单测实现，先要求模型在代码中搜索现有测试初始化方式；默认优先复用框架测试包下的 `Init()` 入口。只有在确认仓库不存在统一 `Init()` 时，才退回到项目现有测试样式补齐初始化，不直接规划手写初始化或自行拼装测试环境。
 - 验证步骤默认先写命中层的最高自然层级验证；存在真实业务链路时，优先写 E2E 或集成验证。
 - 只有在大粒度验证失败后需要诊断、当前命中层天然没有自然 E2E 路径，或存在更自然的集成边界时，才补充更小粒度测试。
 - 若补充了小粒度测试，最终仍要回到大粒度验证闭环。
@@ -61,6 +62,7 @@ allowed-tools:
 - “适用规范来源”只引用本次真实使用的知识来源。
 - 若命中层只需要边界规则，读 `knowledge/` 即可；若需要细规则，继续读 `references/`；若需要具体写法模板，再读 `examples/`。
 - “验证步骤”只覆盖命中层会触发的检查，不补充未命中层的默认验证。
+- “验证步骤”若涉及测试实现，必须先写明：先搜索项目内测试初始化方式，默认优先复用框架测试包下的 `Init()`；仅在确认不存在统一 `Init()` 时，才遵循仓库现有测试样式补齐初始化。
 - “验证步骤”默认从命中层的最高自然层级开始：有自然业务链路时先写 E2E/集成验证，不先从单元测试起手。
 - 若需要更小粒度测试，必须把用途限定为诊断失败原因，或覆盖当前命中层天然没有端到端路径的局部行为。
 - 若补充了小粒度测试，最终仍要回到大粒度验证闭环。
@@ -200,6 +202,8 @@ allowed-tools:
 - “E2E 最后再补”
 - “先写几个小测试更稳妥”
 - “虽然有真实链路，但从单测起手更方便”
+- “直接手写测试初始化，不先搜索现有 `Init()` 入口”
+- “默认自行拼装数据库、缓存、配置等测试环境”
 
 以上均视为失败信号。
 
@@ -218,4 +222,30 @@ allowed-tools:
 - “为了完整性一并补上 ……”
 - “默认增加 controller/router/data”
 
-需要将 plan 内容按照markdown格式输出到superpowers对应的plan目录下
+## Output & Execution Handoff
+
+将生成的 plan 以 markdown 格式保存到 betterpowers 的 plan 目录：`docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`。
+
+**重要：** 保存 plan 后，不要进入 Claude Code 内置的 Plan 模式（EnterPlanMode）。后端开发插件的 plan 配合 betterpowers 的 plan 执行链路工作。
+
+保存 plan 后，MUST 询问用户选择执行方式。不要自动选择——即使用户明确提到"执行"或"实现"，也要先让用户选择。
+
+**"Plan 已保存到 `docs/superpowers/plans/<filename>.md`。**
+
+**此计划包含 [N] 个任务，涉及 [labels]。选择执行方式：**
+
+**1. Subagent-Driven（推荐）** — 使用固定角色 subagent 执行，包含 spec review 和 code quality review
+
+**2. Inline 执行** — 在当前会话中逐任务执行，分批推进并在检查点确认
+
+**选择哪种方式？"**
+
+等待用户明确选择后再继续。不要假设或默认。
+
+**若选择 Subagent-Driven：**
+- **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
+- 固定角色 subagent + 两阶段 review
+
+**若选择 Inline 执行：**
+- **REQUIRED SUB-SKILL:** Use superpowers:executing-plans
+- 分批执行并在检查点确认

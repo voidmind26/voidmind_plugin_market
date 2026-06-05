@@ -104,7 +104,7 @@ dto 是 schema 的主要依据。若 dto 缺失，再回到 controller 返回结
 - handler 名
 - controller / service / dto 来源路径
 
-注意：`fullRoute` 只用于扫描和取证；写入 Apifox 时，`path` 只保留 `apiPath`。
+注意：`fullRoute` 只用于扫描和取证；写入 Apifox 时，应从中剥离部署前缀，仅保留真实业务路由作为 `apifoxPath`，例如 `/flowconfig/create`。
 
 ## 5. 保守降级规则
 

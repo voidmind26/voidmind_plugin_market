@@ -1,6 +1,6 @@
 ---
 name: using-git-worktrees
-description: Use when starting feature work that needs isolation from current workspace or before executing implementation plans - ensures an isolated workspace exists via native tools or git worktree fallback
+description: Use when starting work that should be isolated from the current branch, when the user asks for a worktree, or before executing a plan in a separate workspace
 ---
 
 # Using Git Worktrees
@@ -9,34 +9,59 @@ description: Use when starting feature work that needs isolation from current wo
 
 Ensure work happens in an isolated workspace. Prefer your platform's native worktree tools. Fall back to manual git worktrees only when no native tool is available.
 
-**Core principle:** Detect existing isolation first. Then use native tools. Then fall back to git. Never fight the harness.
+**Core principle:** Resolve the target repository first. Confirm the base branch and output branch before creation. Then detect existing isolation. Then use native tools. Then fall back to git. Never fight the harness.
 
 **Announce at start:** "I'm using the using-git-worktrees skill to set up an isolated workspace."
 
-## Step 0: Detect Existing Isolation
+## Step 0: Resolve Target Repository and Detect Existing Isolation
 
-**Before creating anything, check if you are already in an isolated workspace.**
+**Before creating anything, resolve which repository this task is actually about.**
+
+Use this priority order:
+1. If the current task already names or clearly points to a repository, use that repository.
+2. Otherwise, if the current directory is already inside a git repository, use that repository.
+3. Otherwise, look for git repositories under the current directory.
+4. If that discovery finds exactly one candidate, use it.
+5. If the repository is still ambiguous or no candidate exists, ask the user which repository to use. Do not guess.
+
+**All later git commands in this skill should run against that target repository, even if your session started from a parent directory.**
+
+Once the target repository is known, check whether it is already in an isolated workspace.
 
 ```bash
-GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
-GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
-BRANCH=$(git branch --show-current)
+GIT_DIR=$(cd "$(git -C "$TARGET_REPO" rev-parse --git-dir)" 2>/dev/null && pwd -P)
+GIT_COMMON=$(cd "$(git -C "$TARGET_REPO" rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
+BRANCH=$(git -C "$TARGET_REPO" branch --show-current)
 ```
 
 **Submodule guard:** `GIT_DIR != GIT_COMMON` is also true inside git submodules. Before concluding "already in a worktree," verify you are not in a submodule:
 
 ```bash
 # If this returns a path, you're in a submodule, not a worktree — treat as normal repo
-git rev-parse --show-superproject-working-tree 2>/dev/null
+git -C "$TARGET_REPO" rev-parse --show-superproject-working-tree 2>/dev/null
 ```
 
-**If `GIT_DIR != GIT_COMMON` (and not a submodule):** You are already in a linked worktree. Skip to Step 3 (Project Setup). Do NOT create another worktree.
+**If `GIT_DIR != GIT_COMMON` (and not a submodule):** The target repository is already in a linked worktree. Skip to Step 3 (Project Setup). Do NOT create another worktree.
 
 Report with branch state:
 - On a branch: "Already in isolated workspace at `<path>` on branch `<name>`."
 - Detached HEAD: "Already in isolated workspace at `<path>` (detached HEAD, externally managed). Branch creation needed at finish time."
 
-**If `GIT_DIR == GIT_COMMON` (or in a submodule):** You are in a normal repo checkout.
+**If `GIT_DIR == GIT_COMMON` (or in a submodule):** The target repository is in a normal repo checkout.
+
+Before creating anything, resolve two branch values explicitly:
+- **Base branch:** which branch the worktree should be created from
+- **Output branch:** which branch the implementation will live on inside the worktree
+
+These are branch roles, not a rule that the names must differ. They may be the same branch name.
+
+If your instructions or repository context already make both values clear, state them before creation.
+
+If either value is unclear, ask before creating the worktree. Do not guess.
+
+Use a direct prompt like:
+
+> "Before I create the worktree: which branch should I base it on, and what output branch name should I use for the work?"
 
 Has the user already indicated their worktree preference in your instructions? If not, ask for consent before creating a worktree:
 
@@ -50,7 +75,7 @@ Honor any existing declared preference without asking. If the user declines cons
 
 ### 1a. Native Worktree Tools (preferred)
 
-The user has asked for an isolated workspace (Step 0 consent). Do you already have a way to create a worktree? It might be a tool with a name like `EnterWorktree`, `WorktreeCreate`, a `/worktree` command, or a `--worktree` flag. If you do, use it and skip to Step 3.
+The user has asked for an isolated workspace (Step 0 consent), and the base branch plus output branch are already confirmed. Do you already have a way to create a worktree? It might be a tool with a name like `EnterWorktree`, `WorktreeCreate`, a `/worktree` command, or a `--worktree` flag. If you do, use it and skip to Step 3.
 
 Native tools handle directory placement, branch creation, and cleanup automatically. Using `git worktree add` when you have a native tool creates phantom state your harness can't see or manage.
 
@@ -66,16 +91,16 @@ Follow this priority order. Explicit user preference always beats observed files
 
 1. **Check your instructions for a declared worktree directory preference.** If the user has already specified one, use it without asking.
 
-2. **Check for an existing project-local worktree directory:**
+2. **Check for an existing project-local worktree directory in the target repository:**
    ```bash
-   ls -d .worktrees 2>/dev/null     # Preferred (hidden)
-   ls -d worktrees 2>/dev/null      # Alternative
+   ls -d "$TARGET_REPO/.worktrees" 2>/dev/null     # Preferred (hidden)
+   ls -d "$TARGET_REPO/worktrees" 2>/dev/null      # Alternative
    ```
    If found, use it. If both exist, `.worktrees` wins.
 
 3. **Check for an existing global directory:**
    ```bash
-   project=$(basename "$(git rev-parse --show-toplevel)")
+   project=$(basename "$(git -C "$TARGET_REPO" rev-parse --show-toplevel)")
    ls -d ~/.config/superpowers/worktrees/$project 2>/dev/null
    ```
    If found, use it (backward compatibility with legacy global path).
@@ -87,7 +112,7 @@ Follow this priority order. Explicit user preference always beats observed files
 **MUST verify directory is ignored before creating worktree:**
 
 ```bash
-git check-ignore -q .worktrees 2>/dev/null || git check-ignore -q worktrees 2>/dev/null
+git -C "$TARGET_REPO" check-ignore -q .worktrees 2>/dev/null || git -C "$TARGET_REPO" check-ignore -q worktrees 2>/dev/null
 ```
 
 **If NOT ignored:** Add to .gitignore, commit the change, then proceed.
@@ -98,14 +123,24 @@ Global directories (`~/.config/superpowers/worktrees/`) need no verification.
 
 #### Create the Worktree
 
+Before creating the worktree, state the branch plan explicitly:
+- `Base branch: <base-branch>`
+- `Output branch: <output-branch>`
+
+`<output-branch>` is the branch that will contain the implementation and will later be merged, pushed, or kept. It may be the same as `<base-branch>`.
+
 ```bash
-project=$(basename "$(git rev-parse --show-toplevel)")
+project=$(basename "$(git -C "$TARGET_REPO" rev-parse --show-toplevel)")
 
 # Determine path based on chosen location
-# For project-local: path="$LOCATION/$BRANCH_NAME"
-# For global: path="~/.config/superpowers/worktrees/$project/$BRANCH_NAME"
+# For project-local: path="$LOCATION/$OUTPUT_BRANCH"
+# For global: path="~/.config/superpowers/worktrees/$project/$OUTPUT_BRANCH"
 
-git worktree add "$path" -b "$BRANCH_NAME"
+if [ "$OUTPUT_BRANCH" = "$BASE_BRANCH" ]; then
+  git -C "$TARGET_REPO" worktree add "$path" "$BASE_BRANCH"
+else
+  git -C "$TARGET_REPO" worktree add "$path" -b "$OUTPUT_BRANCH" "$BASE_BRANCH"
+fi
 cd "$path"
 ```
 
@@ -160,6 +195,8 @@ npm test / cargo test / pytest / go test ./...
 
 ```
 Worktree ready at <full-path>
+Base branch: <base-branch>
+Output branch: <output-branch>
 Tests passing (<N> tests, 0 failures)
 Ready to implement <feature-name>
 ```
@@ -168,9 +205,12 @@ Ready to implement <feature-name>
 
 | Situation | Action |
 |-----------|--------|
+| Task already identifies repo | Use that repo first |
+| Repo still ambiguous after context + discovery | Ask user, don't guess |
+| Base branch or output branch unclear | Ask user before creation |
 | Already in linked worktree | Skip creation (Step 0) |
 | In a submodule | Treat as normal repo (Step 0 guard) |
-| Native worktree tool available | Use it (Step 1a) |
+| Native worktree tool available | Use it after branch values are confirmed (Step 1a) |
 | No native tool | Git worktree fallback (Step 1b) |
 | `.worktrees/` exists | Use it (verify ignored) |
 | `worktrees/` exists | Use it (verify ignored) |
@@ -191,7 +231,7 @@ Ready to implement <feature-name>
 
 ### Skipping detection
 
-- **Problem:** Creating a nested worktree inside an existing one
+- **Problem:** Creating a nested worktree inside an existing one or for the wrong repository
 - **Fix:** Always run Step 0 before creating anything
 
 ### Skipping ignore verification
@@ -199,10 +239,20 @@ Ready to implement <feature-name>
 - **Problem:** Worktree contents get tracked, pollute git status
 - **Fix:** Always use `git check-ignore` before creating project-local worktree
 
+### Assuming repository from the open folder
+
+- **Problem:** Parent directories can contain multiple repositories, so the open folder may not identify the task repo
+- **Fix:** Follow priority: task repo > current repo > unique discovered child repo > ask user
+
 ### Assuming directory location
 
 - **Problem:** Creates inconsistency, violates project conventions
 - **Fix:** Follow priority: existing > global legacy > instruction file > default
+
+### Skipping branch confirmation
+
+- **Problem:** Worktree gets created from the wrong base or on an unclear implementation branch
+- **Fix:** Confirm both base branch and output branch before creation, and report both after creation
 
 ### Proceeding with failing tests
 
@@ -213,6 +263,8 @@ Ready to implement <feature-name>
 
 **Never:**
 - Create a worktree when Step 0 detects existing isolation
+- Guess which repository the task means when context is still ambiguous
+- Guess the base branch or output branch when either is unclear
 - Use `git worktree add` when you have a native worktree tool (e.g., `EnterWorktree`). This is the #1 mistake — if you have it, use it.
 - Skip Step 1a by jumping straight to Step 1b's git commands
 - Create worktree without verifying it's ignored (project-local)
@@ -220,9 +272,13 @@ Ready to implement <feature-name>
 - Proceed with failing tests without asking
 
 **Always:**
+- Resolve the task's target repository before running git commands
+- Ask the user if the target repository is still ambiguous
+- Confirm the base branch and output branch before creating the worktree
 - Run Step 0 detection first
 - Prefer native tools over git fallback
 - Follow directory priority: existing > global legacy > instruction file > default
 - Verify directory is ignored for project-local
 - Auto-detect and run project setup
+- Report the worktree path plus both branch values after creation
 - Verify clean test baseline

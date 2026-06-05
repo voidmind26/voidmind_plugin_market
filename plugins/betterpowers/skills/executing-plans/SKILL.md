@@ -1,6 +1,6 @@
 ---
 name: executing-plans
-description: Use when you have a written implementation plan to execute in a separate session with review checkpoints
+description: Use when you already have a written implementation plan and need to execute it in a separate session or in an environment without subagent support
 ---
 
 # Executing Plans
@@ -23,11 +23,14 @@ Load plan, review critically, execute all tasks, report when complete.
 
 ### Step 2: Execute Tasks
 
-For each task:
+For each task or phase:
 1. Mark as in_progress
-2. Follow each step exactly (plan has bite-sized steps)
-3. Run verifications as specified
-4. Mark as completed
+2. Record the current task or phase base SHA before implementation starts
+3. Follow each step exactly (plan has bite-sized steps)
+4. Run verifications as specified
+5. If requesting review, review only the current task or phase requirements and the current task or phase diff
+6. Treat previously accepted work as closed by default; reopen it only when the current task or phase modified it, materially depends on it, or an issue outside the current diff makes the current task or phase invalid
+7. Mark as completed
 
 ### Step 3: Complete Development
 
@@ -59,8 +62,10 @@ After all tasks complete and verified:
 - Follow plan steps exactly
 - Don't skip verifications
 - Reference skills when plan says to
+- When a larger feature spans multiple phases, review each phase against its own requirements and its own diff range
+- Do not repeatedly re-review earlier accepted phases at each checkpoint; reserve holistic review for the end
 - Stop when blocked, don't guess
-- Never start implementation on main/master branch without explicit user consent
+- Never start implementation on the base branch itself (for example main/master) without explicit user consent; if the output branch is the same branch, that still requires explicit user consent
 
 ## Integration
 

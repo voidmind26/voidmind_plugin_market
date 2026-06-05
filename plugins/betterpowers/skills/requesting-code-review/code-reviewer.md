@@ -30,12 +30,21 @@ Task tool (general-purpose):
     git diff {BASE_SHA}..{HEAD_SHA}
     ```
 
+    Review ONLY this git range. Treat previously accepted work outside this diff as closed by default.
+
+    Reopen earlier work only when:
+    - the current task or phase modified it
+    - the current task or phase materially depends on it
+    - a problem outside this diff makes the current task or phase invalid
+
+    If you notice pre-existing or earlier-task issues outside this diff, do not fail the review for them unless they materially affect the current work. Mention them separately as out-of-scope observations only when relevant.
+
     ## What to Check
 
     **Plan alignment:**
-    - Does the implementation match the plan / requirements?
-    - Are deviations justified improvements, or problematic departures?
-    - Is all planned functionality present?
+    - Does the implementation in this diff match the current task or phase plan / requirements?
+    - Are deviations in this diff justified improvements, or problematic departures?
+    - Is all planned functionality for the current task or phase present?
 
     **Code quality:**
     - Clean separation of concerns?
@@ -98,6 +107,9 @@ Task tool (general-purpose):
     ### Recommendations
     [Improvements for code quality, architecture, or process]
 
+    ### Out-of-Scope Observations
+    [Optional: earlier accepted work or pre-existing issues noticed outside this diff that materially affect the current task or phase]
+
     ### Assessment
 
     **Ready to merge?** [Yes | No | With fixes]
@@ -127,7 +139,7 @@ Task tool (general-purpose):
 - `{BASE_SHA}` — starting commit
 - `{HEAD_SHA}` — ending commit
 
-**Reviewer returns:** Strengths, Issues (Critical / Important / Minor), Recommendations, Assessment
+**Reviewer returns:** Strengths, Issues (Critical / Important / Minor), Recommendations, Out-of-Scope Observations, Assessment
 
 ## Example Output
 

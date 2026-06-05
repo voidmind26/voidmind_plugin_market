@@ -159,7 +159,7 @@ already use it in another harness.
 
 3. **writing-plans** - Activates with approved design. Breaks work into bite-sized tasks (2-5 minutes each). Every task has exact file paths, complete code, verification steps.
 
-4. **subagent-driven-development** or **executing-plans** - Activates with plan. Dispatches fresh subagent per task with two-stage review (spec compliance, then code quality), or executes in batches with human checkpoints.
+4. **subagent-driven-development** or **executing-plans** - Activates with plan. Uses fixed-role subagents for implementation, spec compliance review, and code quality review across the execution run, or executes inline in batches with human checkpoints.
 
 5. **test-driven-development** - Activates during implementation. Enforces RED-GREEN-REFACTOR with a default E2E-first stance: write a failing end-to-end or integration test with representative input, watch it fail, implement minimally, and only drop to smaller tests when diagnosis requires it.
 

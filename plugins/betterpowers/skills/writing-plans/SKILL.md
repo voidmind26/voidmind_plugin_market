@@ -1,6 +1,6 @@
 ---
 name: writing-plans
-description: Use when you have a spec or requirements for a multi-step task, before touching code
+description: Use when you have approved requirements or a spec and need a step-by-step implementation plan before touching code
 ---
 
 # Writing Plans
@@ -49,7 +49,7 @@ This structure informs the task decomposition. Each task should produce self-con
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) to implement this plan with fixed-role subagents for implementation, spec review, and code quality review, or superpowers:executing-plans for inline execution. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** [One sentence describing what this builds]
 
@@ -133,19 +133,25 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 ## Execution Handoff
 
-After saving the plan, offer execution choice:
+After saving the plan, you MUST ask the user to choose the execution approach. Do not auto-select — even if the plan qualifies for subagent-driven development, the user decides whether the subagent overhead is justified.
 
-**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Two execution options:**
+Present this exact choice, filling in the task and file counts:
 
-**1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
+**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`.**
 
-**2. Inline Execution** - Execute tasks in this session using executing-plans, batch execution with checkpoints
+**This plan has [N] tasks spanning [M] files. Choose the execution approach:**
+
+**1. Subagent-Driven (recommended)** — I use fixed-role subagents for implementation, spec review, and code quality review, with review loops between tasks
+
+**2. Inline Execution** — I execute all tasks inline in this session, with checkpoints for review
 
 **Which approach?"**
 
+Wait for the user's explicit choice before proceeding. Do not assume or default.
+
 **If Subagent-Driven chosen:**
 - **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
-- Fresh subagent per task + two-stage review
+- Fixed-role subagents + two-stage review
 
 **If Inline Execution chosen:**
 - **REQUIRED SUB-SKILL:** Use superpowers:executing-plans

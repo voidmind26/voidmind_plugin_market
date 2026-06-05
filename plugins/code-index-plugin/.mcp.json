@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "code-index": {
+      "command": "bash",
+      "args": [
+        "-lc",
+        "BIN=\"$CLAUDE_PLUGIN_ROOT/bin/code-index-mcp\"; if [ ! -f \"$BIN\" ]; then cd \"$CLAUDE_PLUGIN_ROOT\" && GOWORK=off go build -o \"$BIN\" ./cmd/code-index-mcp; fi; exec \"$BIN\""
+      ]
+    }
+  }
+}

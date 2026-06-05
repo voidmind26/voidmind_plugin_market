@@ -1,6 +1,6 @@
 ---
 name: writing-skills
-description: Use when creating new skills, editing existing skills, or verifying skills work before deployment
+description: Use when creating or revising a SKILL.md, tuning frontmatter descriptions for discovery, or verifying a skill works before deployment
 ---
 
 # Writing Skills

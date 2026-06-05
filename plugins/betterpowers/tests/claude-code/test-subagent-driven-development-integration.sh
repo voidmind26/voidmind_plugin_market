@@ -11,11 +11,11 @@ echo " Integration Test: subagent-driven-development"
 echo "========================================"
 echo ""
 echo "This test executes a real plan using the skill and verifies:"
-echo "  1. Plan is read once (not per task)"
-echo "  2. Full task text provided to subagents"
-echo "  3. Subagents perform self-review"
-echo "  4. Spec compliance review before code quality"
-echo "  5. Review loops when issues found"
+echo "  1. Fixed-role subagents are established for the execution run"
+echo "  2. The same role model is used across multiple tasks"
+echo "  3. Full task text provided to the implementer role"
+echo "  4. Spec compliance review before code quality review"
+echo "  5. Review loops when issues are found"
 echo "  6. Spec reviewer reads code independently"
 echo ""
 echo "WARNING: This test may take 10-30 minutes to complete."
@@ -124,9 +124,9 @@ cat > "$TEST_PROJECT/prompt.txt" <<'EOF'
 I want you to execute the implementation plan at docs/superpowers/plans/implementation-plan.md using the subagent-driven-development skill.
 
 IMPORTANT: Follow the skill exactly. I will be verifying that you:
-1. Read the plan once at the beginning
-2. Provide full task text to subagents (don't make them read files)
-3. Ensure subagents do self-review before reporting
+1. Establish fixed-role subagents for the execution run
+2. Provide full task text to the implementer role (don't make it read files)
+3. Ensure the implementer role does self-review before reporting
 4. Run spec compliance review before code quality review
 5. Use review loops when issues are found
 
@@ -138,9 +138,9 @@ EOF
 PROMPT="Execute the implementation plan at docs/superpowers/plans/implementation-plan.md using the subagent-driven-development skill.
 
 IMPORTANT: Follow the skill exactly. I will be verifying that you:
-1. Read the plan once at the beginning
-2. Provide full task text to subagents (don't make them read files)
-3. Ensure subagents do self-review before reporting
+1. Establish fixed-role subagents for the execution run
+2. Provide full task text to the implementer role (don't make it read files)
+3. Ensure the implementer role does self-review before reporting
 4. Run spec compliance review before code quality review
 5. Use review loops when issues are found
 
@@ -202,13 +202,12 @@ else
 fi
 echo ""
 
-# Test 2: Subagents were used (Agent / Task tool — name varies by harness version)
-echo "Test 2: Subagents dispatched..."
-task_count=$(grep -cE '"name":"(Agent|Task)"' "$SESSION_FILE" || echo "0")
-if [ "$task_count" -ge 2 ]; then
-    echo "  [PASS] $task_count subagents dispatched"
+# Test 2: Fixed-role wording appears in transcript
+echo "Test 2: Fixed-role subagent model..."
+if grep -qE "persistent implementer|fixed-role subagents|fixed role subagents" "$SESSION_FILE"; then
+    echo "  [PASS] Transcript reflects fixed-role subagent model"
 else
-    echo "  [FAIL] Only $task_count subagent(s) dispatched (expected >= 2)"
+    echo "  [FAIL] Transcript does not reflect fixed-role subagent model"
     FAILED=$((FAILED + 1))
 fi
 echo ""

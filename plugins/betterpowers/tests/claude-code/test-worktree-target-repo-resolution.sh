@@ -6,6 +6,26 @@
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+if ! command -v timeout >/dev/null 2>&1; then
+    timeout() {
+        local seconds="$1"
+        shift
+        python3 - "$seconds" "$@" <<'PY'
+import subprocess
+import sys
+
+timeout_seconds = int(sys.argv[1])
+cmd = sys.argv[2:]
+try:
+    completed = subprocess.run(cmd, timeout=timeout_seconds)
+    sys.exit(completed.returncode)
+except subprocess.TimeoutExpired:
+    sys.exit(124)
+PY
+    }
+fi
+
 source "$SCRIPT_DIR/test-helpers.sh"
 
 failures=0

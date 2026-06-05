@@ -1,6 +1,6 @@
 ---
 name: dispatching-parallel-agents
-description: Use when facing 2+ independent tasks that can be worked on without shared state or sequential dependencies
+description: Use when multiple unrelated bugs, failing test files, or subsystems can be investigated in parallel without shared state or overlapping edits
 ---
 
 # Dispatching Parallel Agents
