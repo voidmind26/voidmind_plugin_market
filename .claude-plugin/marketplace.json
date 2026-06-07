@@ -1,0 +1,49 @@
+{
+  "name": "voidmind-plugin-market",
+  "description": "私有 zcode 插件市场，管理多个内部插件的集合仓库",
+  "owner": {
+    "name": "voidmind",
+    "email": "voidmind@zuoyebang.cc"
+  },
+  "plugins": [
+    {
+      "name": "apifox-codegen-plugin",
+      "description": "从 Go Web 代码生成 Apifox 接口文档与场景化测试用例的统一插件",
+      "version": "0.1.0",
+      "author": {
+        "name": "voidmind",
+        "email": "voidmind@zuoyebang.cc"
+      },
+      "source": "./plugins/apifox-codegen-plugin"
+    },
+    {
+      "name": "backend-construct-plugin",
+      "description": "后端 plan 阶段统一入口插件，提供标签驱动计划与复杂任务辅助",
+      "version": "0.2.0",
+      "author": {
+        "name": "voidmind",
+        "email": "voidmind@zuoyebang.cc"
+      },
+      "source": "./plugins/backend-construct-plugin"
+    },
+    {
+      "name": "betterpowers",
+      "description": "优化版本的superpowers",
+      "version": "1.0.0",
+      "author": {
+        "name": "rph"
+      },
+      "source": "./plugins/betterpowers"
+    },
+    {
+      "name": "fusion-mcp",
+      "description": "Autodesk Fusion 360 MCP integration - execute scripts, read model data, take screenshots, and control Fusion documents via MCP.",
+      "version": "0.1.0",
+      "author": {
+        "name": "voidmind",
+        "email": "voidmind@zuoyebang.cc"
+      },
+      "source": "./plugins/fusion-mcp"
+    }
+  ]
+}
