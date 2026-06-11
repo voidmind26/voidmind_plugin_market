@@ -4,43 +4,49 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-私有 Claude Code 插件集合仓库（插件市场），用于存放和管理自定义 zcode 插件。
+私有 zcode / Claude Code 插件市场仓库，用于集中管理多个内部插件。根级市场清单在 `.claude-plugin/marketplace.json`，各插件在 `plugins/<plugin-name>/` 下独立维护自己的 `.claude-plugin/plugin.json`、技能、代理、钩子或 MCP 配置。
 
-## 市场结构
+## 仓库结构
 
-```
-├── .claude-plugin/plugin.json    # 市场根级插件清单
-├── plugins/                      # 独立插件目录
+```text
+├── .claude-plugin/marketplace.json   # 市场级清单，注册所有插件来源
+├── plugins/
 │   └── <plugin-name>/
-│       ├── .claude-plugin/plugin.json
-│       ├── commands/             # 命令组件
-│       ├── agents/               # 子代理组件
-│       ├── skills/               # 技能组件
-│       │   └── <skill-name>/SKILL.md
-│       ├── hooks/                # 钩子组件
-│       │   ├── hooks.json
-│       │   └── scripts/
-│       └── .mcp.json             # MCP 服务配置（可选）
+│       ├── .claude-plugin/plugin.json # 单插件清单
+│       ├── commands/                  # slash command 组件（可选）
+│       ├── agents/                    # 子代理组件（可选）
+│       ├── skills/<skill>/SKILL.md    # skill 组件（可选）
+│       ├── hooks/hooks.json           # hook 组件（可选）
+│       └── .mcp.json                  # MCP 服务配置（可选）
+├── CLAUDE.md
+└── README.md
 ```
 
-## 添加新插件
+## 架构速览
 
-- 复制 `plugins/plugin-template` 作为起点
-- 修改 `.claude-plugin/plugin.json` 中的 name/description
-- 按需创建组件目录，不要为了"看起来完整"创建空目录
-- 目录和文件名统一使用 `kebab-case`
+- 根级 `.claude-plugin/marketplace.json` 是插件市场注册源，新增、删除或升级插件时同步维护这里和 `README.md` 的插件列表。
+- 每个 `plugins/<plugin-name>/` 是独立插件边界；插件内部引用路径优先使用 `${CLAUDE_PLUGIN_ROOT}`，不要写死本机绝对路径。
+- `apifox-codegen-plugin`、`backend-construct-plugin`、`betterpowers` 主要提供 skills/agents/hooks 等 Claude Code 行为组件；修改 skill 内容时优先保持触发描述、工作流边界和参考文档一致。
+- `code-index-plugin` 是 Go MCP 插件，提供本地代码索引的构建、刷新、搜索和状态查询能力；索引数据写入使用方项目的 `.claude/code-index/`。
+- `gateway-platform-plugin` 是复合插件：Go MCP/HTTP 服务负责本地网关与 SQLite 数据，`frontend/` 是 Vue Web Console，构建产物会复制到 `server/router/frontend_dist/` 供 Go 服务内嵌。
+- `fusion-mcp` 通过 `.mcp.json` 接入 Fusion 360 MCP 能力，当前主要是外部 MCP 集成配置。
 
-## 关键路径
+## 添加或调整插件
 
-- 插件内部引用使用 `${CLAUDE_PLUGIN_ROOT}` 而非硬编码绝对路径
-- 全局配置路径：`~/.claude/settings.json`
+- 新插件优先复制 `plugins/plugin-template` 作为起点，然后修改 `plugins/<plugin-name>/.claude-plugin/plugin.json`。
+- 只创建实际需要的 `commands/`、`agents/`、`skills/`、`hooks/` 等目录，不要为了结构完整创建空目录。
+- 目录、文件和组件名统一使用 `kebab-case`。
+- 新增插件后同步更新 `.claude-plugin/marketplace.json` 和 `README.md`；若插件暴露 MCP 服务，同时维护插件内 `.mcp.json`。
 
 ## 已注册插件速览
 
 | 插件 | 主要组件 |
 |------|----------|
-| `plugins/apifox-codegen-plugin/` | skills: `apifox-dev`, `generate-interfaces-from-code`, `generate-scenario-tests` |
-| `plugins/backend-construct-plugin/` | agents: `backend-plan-agent`; skills: `backend-dev`, `write-plans-with-construct` |
-| `plugins/betterpowers/` | hooks; skills: `brainstorming`, `test-driven-development`, `systematic-debugging`, `writing-plans`, `requesting-code-review`, `subagent-driven-development` 等 |
+| `plugins/apifox-codegen-plugin/` | skills: `apifox-dev`, `generate-interfaces-from-code`, `generate-scenario-tests`; Apifox HTTP MCP 配置 |
+| `plugins/backend-construct-plugin/` | agents: `backend-plan-agent`; skills: `backend-dev`, `write-plans-with-construct`; `knowledge/`、`references/`、`examples/` |
+| `plugins/betterpowers/` | hooks; 通用开发流程 skills，如 `brainstorming`、`test-driven-development`、`systematic-debugging`、`writing-plans` 等 |
+| `plugins/code-index-plugin/` | Go MCP 服务; skills: `code-index-init`, `code-index-refresh`, `code-index-search` |
+| `plugins/fusion-mcp/` | Fusion 360 MCP 集成配置 |
+| `plugins/gateway-platform-plugin/` | Go MCP/HTTP 网关、SQLite 数据层、Vue Web Console、Python 测试 |
 
-`betterpowers` 有独立的 `hooks/hooks.json`，可通过 SessionStart hook 自动加载。
+`plugins/betterpowers/` 有独立的 `CLAUDE.md` 和 `hooks/hooks.json`；修改该目录时必须遵守其子目录指南。
