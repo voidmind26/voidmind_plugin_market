@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "gateway-platform": {
+      "command": "bash",
+      "args": [
+        "-lc",
+        "cd \"$CLAUDE_PLUGIN_ROOT\"; BIN=\"$CLAUDE_PLUGIN_ROOT/bin/gateway-platform-mcp\"; if [ ! -x \"$BIN\" ]; then ./build.sh; fi; exec \"$BIN\""
+      ]
+    }
+  }
+}

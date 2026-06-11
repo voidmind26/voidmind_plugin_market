@@ -53,6 +53,16 @@
         "email": "voidmind@zuoyebang.cc"
       },
       "source": "./plugins/fusion-mcp"
+    },
+    {
+      "name": "gateway-platform-plugin",
+      "description": "本地 HTTP MCP 网关平台插件，提供 route、secret、动态注入与 Web Console。",
+      "version": "1.0.1",
+      "author": {
+        "name": "voidmind",
+        "email": "voidmind@zuoyebang.cc"
+      },
+      "source": "./plugins/gateway-platform-plugin"
     }
   ]
 }

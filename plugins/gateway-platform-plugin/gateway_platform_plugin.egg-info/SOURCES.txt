@@ -1,0 +1,8 @@
+README.md
+pyproject.toml
+gateway_platform_plugin.egg-info/PKG-INFO
+gateway_platform_plugin.egg-info/SOURCES.txt
+gateway_platform_plugin.egg-info/dependency_links.txt
+gateway_platform_plugin.egg-info/requires.txt
+gateway_platform_plugin.egg-info/top_level.txt
+tests/test_package_layout.py
