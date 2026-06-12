@@ -104,3 +104,26 @@ Before proposing changes to skill design, workflow philosophy, or architecture, 
 - One problem per PR
 - Test on at least one harness and report results in the environment table
 - Describe the problem you solved, not just what you changed
+
+## Local Validation
+
+本 fork 只保留零 token 成本的本地测试；不要新增默认调用真实模型的行为测试。
+
+常用验证命令：
+
+```bash
+cd tests/brainstorm-server
+npm test
+node ws-protocol.test.js
+./windows-lifecycle.test.sh
+
+cd ../codex-plugin-sync
+./test-sync-to-codex-plugin.sh
+
+cd ../..
+while IFS= read -r file; do
+  bash -n "$file"
+done < <(rg --files tests -g '*.sh')
+```
+
+如果需要验证技能真实行为，使用临时手动实验，不要把消耗 token 的 `claude -p` 测试放入默认测试目录。
