@@ -5,7 +5,7 @@ description: Use when you have a written implementation plan with multiple tasks
 
 # Subagent-Driven Development
 
-Execute a written plan using fixed-role subagents: one persistent implementer, one persistent spec reviewer, and one persistent code quality reviewer, with two-stage review after each task or phase.
+Execute a written plan using fixed-role subagents with a hybrid lifecycle: one persistent implementer (continued across tasks via SendMessage to preserve codebase continuity), plus a fresh spec reviewer and a fresh code quality reviewer dispatched per task (no cross-task memory, so each review stays independent), with two-stage review after each task or phase.
 
 **Why subagents:** You delegate work to specialized agents with isolated context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their role. They should never inherit your full session history — you construct exactly what they need. This also preserves your own context for coordination work.
 
@@ -51,7 +51,7 @@ For each task or phase:
 - Record a task/phase head SHA after implementation changes are complete
 - Run spec compliance review against only that task or phase's requirements and diff
 - Run code quality review against only that task or phase's diff
-- Persistent reviewers may remember earlier phases, but must still review the current task or phase against its own requirements and diff by default
+- Dispatch a fresh spec reviewer and a fresh code quality reviewer for each task or phase, carrying no memory of earlier tasks — independence is the whole point of review. Within a single task's review loop, a re-check after the implementer fixes issues continues that same reviewer (it already raised the issue); each new task always gets a freshly dispatched reviewer.
 
 Treat previously accepted work as closed by default. Reopen it only when:
 - The current task or phase modified it
@@ -70,8 +70,6 @@ digraph process {
 
     "Read plan, extract all tasks with full text, note context, create TodoWrite" [shape=box];
     "Start persistent implementer (./implementer-prompt.md)" [shape=box];
-    "Start persistent spec reviewer (./spec-reviewer-prompt.md)" [shape=box];
-    "Start persistent code quality reviewer (./code-quality-reviewer-prompt.md)" [shape=box];
     "More tasks remain?" [shape=diamond];
     "Record task/phase base SHA" [shape=box];
     "Send current task/phase to implementer" [shape=box];
@@ -79,11 +77,11 @@ digraph process {
     "Answer questions, provide context" [shape=box];
     "Implementer implements, tests, commits, self-reviews" [shape=box];
     "Record task/phase head SHA" [shape=box];
-    "Send current task/phase requirements + diff to spec reviewer" [shape=box];
+    "Dispatch this task's spec reviewer (requirements + diff; fresh per task)" [shape=box];
     "Spec reviewer approves current scope?" [shape=diamond];
     "Route spec issues back to implementer" [shape=box];
     "Record updated head SHA" [shape=box];
-    "Send current diff to code quality reviewer" [shape=box];
+    "Dispatch this task's code quality reviewer (diff; fresh per task)" [shape=box];
     "Code quality reviewer approves current scope?" [shape=diamond];
     "Route quality issues back to implementer" [shape=box];
     "Record updated head SHA after quality fixes" [shape=box];
@@ -92,9 +90,7 @@ digraph process {
     "Use superpowers:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
 
     "Read plan, extract all tasks with full text, note context, create TodoWrite" -> "Start persistent implementer (./implementer-prompt.md)";
-    "Start persistent implementer (./implementer-prompt.md)" -> "Start persistent spec reviewer (./spec-reviewer-prompt.md)";
-    "Start persistent spec reviewer (./spec-reviewer-prompt.md)" -> "Start persistent code quality reviewer (./code-quality-reviewer-prompt.md)";
-    "Start persistent code quality reviewer (./code-quality-reviewer-prompt.md)" -> "More tasks remain?";
+    "Start persistent implementer (./implementer-prompt.md)" -> "More tasks remain?";
     "More tasks remain?" -> "Record task/phase base SHA" [label="yes"];
     "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
     "Record task/phase base SHA" -> "Send current task/phase to implementer";
@@ -103,21 +99,23 @@ digraph process {
     "Answer questions, provide context" -> "Send current task/phase to implementer";
     "Implementer asks questions?" -> "Implementer implements, tests, commits, self-reviews" [label="no"];
     "Implementer implements, tests, commits, self-reviews" -> "Record task/phase head SHA";
-    "Record task/phase head SHA" -> "Send current task/phase requirements + diff to spec reviewer";
-    "Send current task/phase requirements + diff to spec reviewer" -> "Spec reviewer approves current scope?";
+    "Record task/phase head SHA" -> "Dispatch this task's spec reviewer (requirements + diff; fresh per task)";
+    "Dispatch this task's spec reviewer (requirements + diff; fresh per task)" -> "Spec reviewer approves current scope?";
     "Spec reviewer approves current scope?" -> "Route spec issues back to implementer" [label="no"];
     "Route spec issues back to implementer" -> "Record updated head SHA";
-    "Record updated head SHA" -> "Send current task/phase requirements + diff to spec reviewer";
-    "Spec reviewer approves current scope?" -> "Send current diff to code quality reviewer" [label="yes"];
-    "Send current diff to code quality reviewer" -> "Code quality reviewer approves current scope?";
+    "Record updated head SHA" -> "Dispatch this task's spec reviewer (requirements + diff; fresh per task)";
+    "Spec reviewer approves current scope?" -> "Dispatch this task's code quality reviewer (diff; fresh per task)" [label="yes"];
+    "Dispatch this task's code quality reviewer (diff; fresh per task)" -> "Code quality reviewer approves current scope?";
     "Code quality reviewer approves current scope?" -> "Route quality issues back to implementer" [label="no"];
     "Route quality issues back to implementer" -> "Record updated head SHA after quality fixes";
-    "Record updated head SHA after quality fixes" -> "Send current diff to code quality reviewer";
+    "Record updated head SHA after quality fixes" -> "Dispatch this task's code quality reviewer (diff; fresh per task)";
     "Code quality reviewer approves current scope?" -> "Mark task complete in TodoWrite" [label="yes"];
     "Mark task complete in TodoWrite" -> "More tasks remain?";
     "Dispatch final code reviewer subagent for entire implementation" -> "Use superpowers:finishing-a-development-branch";
 }
 ```
+
+> **Reviewer lifecycle note:** Only the implementer is started up front. Each task dispatches its own fresh spec and code-quality reviewers. In the diagram, the loop back to a reviewer node after a fix means *continue that task's same reviewer* on the updated diff (task-internal re-check), not a brand-new dispatch — a fresh dispatch happens only when a new task begins.
 
 ## Model Selection
 
@@ -128,6 +126,20 @@ Design happens on the orchestrator; execution and verification happen on subagen
 **Execution and verification — subagents (Sonnet).** Dispatch all three fixed roles — implementer, spec compliance reviewer, code quality reviewer — with the **Sonnet** model. Once the plan is well-specified, implementation, spec review, and quality review are execution work that Sonnet handles well at lower cost and higher speed.
 
 **Escalation exception:** If a Sonnet implementer reports BLOCKED for a reason that is genuinely reasoning-bound (not a missing-context problem), the orchestrator MAY temporarily upgrade that one task to Opus — see "Handling Implementer Status." Default back to Sonnet for the next task.
+
+## Implementer Checkpoint Reset (Optional — default off)
+
+The implementer is the only role that persists across tasks, so on a very long plan its context can degrade. This reset is **off by default**; apply it only when the controller judges it necessary.
+
+**Trigger when:** the implementer repeatedly errs, loses track of earlier decisions, or churns on NEEDS_CONTEXT — or after a pre-agreed number of tasks (K) on an unusually long plan.
+
+**Action:** start a new implementer seeded with a compact handoff instead of the full accumulated context. The handoff contains:
+- a short summary of completed tasks and their outcomes
+- key decisions and conventions established so far
+- the list of files touched and their responsibilities
+- the current task's full text and local context
+
+The fresh implementer takes over from the next task. Reviewers are unaffected — they are already fresh per task.
 
 ## Handling Implementer Status
 
@@ -150,8 +162,8 @@ The persistent implementer role reports one of four statuses for each task or ph
 ## Prompt Templates
 
 - `./implementer-prompt.md` - Start and guide the persistent implementer role
-- `./spec-reviewer-prompt.md` - Start and guide the persistent spec compliance reviewer role
-- `./code-quality-reviewer-prompt.md` - Start and guide the persistent code quality reviewer role
+- `./spec-reviewer-prompt.md` - Dispatch a fresh spec compliance reviewer per task
+- `./code-quality-reviewer-prompt.md` - Dispatch a fresh code quality reviewer per task
 
 ## Example Workflow
 
@@ -161,28 +173,28 @@ You: I'm using Subagent-Driven Development to execute this plan.
 [Read plan file once: docs/superpowers/plans/feature-plan.md]
 [Extract all tasks with full text and context]
 [Create TodoWrite with all tasks]
-[Start persistent implementer]
-[Start persistent spec-reviewer]
-[Start persistent code-quality-reviewer]
+[Start persistent implementer]              # only the implementer is started up front
 
 Task 1:
-[Send Task 1 text + context to implementer]
+[SendMessage Task 1 text + context to implementer]
 [Implementer reports DONE]
-[Send Task 1 requirements + diff to spec-reviewer]
+[Dispatch FRESH spec-reviewer with Task 1 requirements + diff]
 [Spec-reviewer approves]
-[Send Task 1 diff to code-quality-reviewer]
+[Dispatch FRESH code-quality-reviewer with Task 1 diff]
 [Code-quality-reviewer approves]
-[Mark Task 1 complete]
+[Mark Task 1 complete — both reviewers discarded]
 
 Task 2:
-[Send Task 2 text + context to same implementer]
+[SendMessage Task 2 text + context to SAME implementer]
 [Implementer reports DONE_WITH_CONCERNS]
-[Send Task 2 requirements + diff to same spec-reviewer]
+[Dispatch FRESH spec-reviewer with Task 2 requirements + diff]   # new agent, no memory of Task 1
 [Spec-reviewer finds a missing requirement]
-[Route issue back to same implementer]
+[Route issue back to same implementer via SendMessage]
 [Implementer fixes and reports back]
-[Re-run spec review]
-[Run code quality review]
+[CONTINUE the same Task 2 spec-reviewer to re-check the fix]     # task-internal continue
+[Spec-reviewer approves]
+[Dispatch FRESH code-quality-reviewer with Task 2 diff]
+[Code-quality-reviewer approves]
 [Mark Task 2 complete]
 
 ...
@@ -211,7 +223,7 @@ Task 2:
 - Subagent gets complete information upfront
 - Questions surfaced before work begins (not after)
 - Fewer role restarts during a long execution run
-- Controller invests upfront in role setup, then routes task-scoped context through the same roles
+- Controller invests upfront in implementer setup, then routes task-scoped context through the persistent implementer while giving each task an independently dispatched reviewer
 
 **Quality gates:**
 - Self-review catches issues before handoff
@@ -219,9 +231,10 @@ Task 2:
 - Review loops ensure fixes actually work
 - Spec compliance prevents over/under-building
 - Code quality ensures implementation is well-built
+- Per-task fresh reviewers carry no accumulated bias from earlier tasks, so each review is genuinely independent
 
 **Cost:**
-- Persistent roles accumulate more local context and need tighter scope discipline
+- The persistent implementer accumulates local context and needs scope discipline (and, on very long plans, an optional checkpoint reset — see "Implementer Checkpoint Reset"); fresh per-task reviewers avoid this accumulation entirely
 - Controller does upfront setup work before task routing begins
 - Review loops add iterations
 - But catches issues early (cheaper than debugging later)
@@ -241,6 +254,8 @@ Task 2:
 - Let implementer self-review replace actual review (both are needed)
 - **Start code quality review before spec compliance is ✅** (wrong order)
 - Move to next task while either review has open issues
+- Carry reviewer context across tasks — each task gets a freshly dispatched reviewer with no memory of earlier tasks
+- Reuse a prior task's reviewer for a new task
 
 **If subagent asks questions:**
 - Answer clearly and completely
@@ -249,12 +264,12 @@ Task 2:
 
 **If reviewer finds issues:**
 - The same implementer role fixes them
-- Reviewer reviews again
+- The same task's reviewer (continued within this task's loop) reviews again — do not spin up a new reviewer mid-task
 - Repeat until approved
 - Don't skip the re-review
 
 **If the implementer role fails repeatedly:**
-- Upgrade or replace the role explicitly
+- Upgrade or replace the role explicitly (or apply a checkpoint reset — see "Implementer Checkpoint Reset")
 - Don't silently start ad-hoc fix agents
 - Don't try to fix manually (context pollution)
 
