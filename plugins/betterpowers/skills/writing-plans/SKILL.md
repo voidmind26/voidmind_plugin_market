@@ -33,6 +33,28 @@ Before defining tasks, map out which files will be created or modified and what 
 
 This structure informs the task decomposition. Each task should produce self-contained changes that make sense independently.
 
+## Task Sizing and Review Header
+
+**Consume the spec's Task Decomposition Overview.** If the spec includes one, use its behavior-level breakdown and ordering as the basis for your tasks instead of re-deriving them; refine each item into a task with steps. If the spec marked the work simple (or predates this section), derive the breakdown yourself — but apply the sizing criteria below either way.
+
+**Task sizing.** A task is one coherent, independently committable unit that drives ONE verifiable behavior, touches a bounded set of files, and is small enough to hold in context and to review against a single requirement.
+
+- Too big (split it): more than one independent behavior; touches many unrelated files; can't be expressed by a single focused failing test; review would span multiple concerns.
+- Too small (merge it): a single step masquerading as a task (e.g., "rename a variable" as its own task); creates churn.
+- Rule of thumb: one task ≈ one test-driven behavior slice.
+
+**Every task leads with a review header**, placed before its steps, so a human can review the plan's shape and coverage without reading every code block:
+
+```
+### Task N: <name>
+- **Intent:** <the one verifiable behavior this task achieves>
+- **Covers spec:** <which spec section/requirement it implements>
+- **Files:** <files touched>
+- **Granularity rationale:** <why this is one task, not several or half of one>
+```
+
+The human reviews these headers (coverage, ordering, sizing); the code in the steps is verified by the plan-document reviewer and by execution-time per-task review.
+
 ## Bite-Sized Task Granularity
 
 **Each step is one action (2-5 minutes):**
@@ -64,6 +86,10 @@ This structure informs the task decomposition. Each task should produce self-con
 
 ````markdown
 ### Task N: [Component Name]
+
+- **Intent:** [the one verifiable behavior this task achieves]
+- **Covers spec:** [which spec section/requirement]
+- **Granularity rationale:** [why this is one task, not several or half of one]
 
 **Files:**
 - Create: `exact/path/to/file.py`
@@ -128,6 +154,8 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 **2. Placeholder scan:** Search your plan for red flags — any of the patterns from the "No Placeholders" section above. Fix them.
 
 **3. Type consistency:** Do the types, method signatures, and property names you used in later tasks match what you defined in earlier tasks? A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.
+
+**4. Task granularity & headers:** Does each task map to exactly one verifiable behavior (no task bundles several; no step promoted to a task)? Does every task have a complete review header (Intent / Covers spec / Files / Granularity rationale)?
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 

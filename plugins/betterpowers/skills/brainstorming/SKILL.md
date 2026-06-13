@@ -96,7 +96,7 @@ You MUST create a task for each of these items and complete them in order:
 - When the user already supplied enough information, do not present the design in section-by-section approval loops.
 - Instead, write the complete spec to the standard location and present a short summary that helps the user review it quickly.
 - If earlier clarification exposed a real design decision, make that decision explicit in the spec and include the trade-off in your summary.
-- Cover: architecture, components, data flow, error handling, testing.
+- Cover: architecture, components, data flow, error handling, testing, and a Task Decomposition Overview (see below).
 - Be ready to revise the written spec if something doesn't make sense.
 
 **Design for isolation and clarity:**
@@ -105,6 +105,18 @@ You MUST create a task for each of these items and complete them in order:
 - For each unit, you should be able to answer: what does it do, how do you use it, and what does it depend on?
 - Can someone understand what a unit does without reading its internals? Can you change the internals without breaking consumers? If not, the boundaries need work.
 - Smaller, well-bounded units are also easier for you to work with - you reason better about code you can hold in context at once, and your edits are more reliable when files are focused. When a file grows large, that's often a signal that it's doing too much.
+
+**Task Decomposition Overview (tiered):**
+
+The spec is the human-reviewable artifact; the plan is not. So decide the coarse task breakdown here, where design context is richest, and let writing-plans refine it into steps. Include a "Task Decomposition Overview" section in the spec, sized to complexity:
+
+- **Simple** (a single coherent unit, clear path, few tasks): one line — "Single plannable unit; the plan skill will slice it into tasks."
+- **Complex** (spans multiple units, the split is not unique, or ordering affects rework): provide
+  1. a behavior-level task breakdown (NOT bite-sized steps),
+  2. the dependency order (what to build first to reduce rework/uncertainty), and
+  3. a sizing check — each item must be completable within one plan; if any item is too big, decompose it into a sub-project/sub-spec.
+
+Do NOT put bite-sized implementation steps in the spec — those belong in the plan. The spec only locks the behavior-level breakdown, ordering, and sizing.
 
 **Working in existing codebases:**
 
