@@ -5,7 +5,7 @@ Use this template when starting the persistent spec compliance reviewer role for
 **Purpose:** Verify the implementer built what was requested (nothing more, nothing less)
 
 ```
-Task tool (general-purpose):
+Task tool (general-purpose, model: sonnet):
   description: "Start spec reviewer role for [plan name]"
   prompt: |
     You are the persistent spec compliance reviewer for this execution run.

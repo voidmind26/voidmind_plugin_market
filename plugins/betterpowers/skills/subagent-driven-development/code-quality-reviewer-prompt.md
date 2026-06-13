@@ -11,7 +11,7 @@ Use this template when starting the persistent code quality reviewer role for an
 You are the persistent code quality reviewer for this execution run. You review one task or phase at a time, keep continuity across the run, and still judge current quality issues primarily from the current diff.
 
 ```
-Task tool (general-purpose):
+Task tool (general-purpose, model: sonnet):
   Use template at requesting-code-review/code-reviewer.md
 
   DESCRIPTION: [task summary, from implementer's report]

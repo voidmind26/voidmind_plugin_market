@@ -161,7 +161,7 @@ After the large test passes reliably:
 - Improve names
 - Simplify structure
 
-Do not backfill unit tests for every new function by default. Add smaller tests only where they continue to carry diagnostic or regression value.
+Do not backfill unit tests for every new function by default. Add smaller tests only where they continue to carry diagnostic or regression value. Drop-down diagnostic tests you write here do not need to be kept long-term — the superpowers:finishing-a-development-branch curation gate decides what enters the baseline before merge, so don't keep a test out of fear of deleting it.
 
 ## Good Tests
 

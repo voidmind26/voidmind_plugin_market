@@ -121,18 +121,13 @@ digraph process {
 
 ## Model Selection
 
-Use the least powerful model that can handle each role to conserve cost and increase speed.
+Design happens on the orchestrator; execution and verification happen on subagents. Split the models along that line:
 
-**Mechanical implementation tasks** (isolated functions, clear specs, 1-2 files): use a fast, cheap model. Most implementation tasks are mechanical when the plan is well-specified.
+**Design phase — orchestrator (Opus).** Brainstorming the spec and writing the plan are judgment-heavy and run in the main session. Keep the session on the most capable model (Opus). The orchestrator that runs this skill also stays on Opus to coordinate, review status, and resolve escalations.
 
-**Integration and judgment tasks** (multi-file coordination, pattern matching, debugging): use a standard model.
+**Execution and verification — subagents (Sonnet).** Dispatch all three fixed roles — implementer, spec compliance reviewer, code quality reviewer — with the **Sonnet** model. Once the plan is well-specified, implementation, spec review, and quality review are execution work that Sonnet handles well at lower cost and higher speed.
 
-**Architecture, design, and review tasks**: use the most capable available model.
-
-**Task complexity signals:**
-- Touches 1-2 files with a complete spec → cheap model
-- Touches multiple files with integration concerns → standard model
-- Requires design judgment or broad codebase understanding → most capable model
+**Escalation exception:** If a Sonnet implementer reports BLOCKED for a reason that is genuinely reasoning-bound (not a missing-context problem), the orchestrator MAY temporarily upgrade that one task to Opus — see "Handling Implementer Status." Default back to Sonnet for the next task.
 
 ## Handling Implementer Status
 

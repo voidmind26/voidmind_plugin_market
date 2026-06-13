@@ -9,7 +9,7 @@ description: Use when implementation appears complete and you need to decide whe
 
 Guide completion of development work by presenting clear options and handling chosen workflow.
 
-**Core principle:** Verify tests → Resolve target repository → Detect environment → Present options → Execute choice → Clean up.
+**Core principle:** Verify tests → Resolve target repository → Detect environment → Determine branches → Curate branch tests → Present options → Execute choice → Clean up.
 
 **Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
 
@@ -80,6 +80,48 @@ git -C "$TARGET_REPO" branch --show-current
 ```
 
 If either branch is unclear, ask directly instead of guessing.
+
+### Step 3b: Curate the Branch's Tests
+
+**Runs after the base/output branches are known (Step 3) and before presenting options (Step 4). Requires tests already green from Step 1.**
+
+The TDD cycle accumulates drop-down diagnostic tests that were useful during development but should not all persist into the baseline regression suite. Before this branch's work enters the baseline, curate the tests it added so only high-quality, representative tests remain.
+
+**Scope:** Only tests this branch added or modified — never pre-existing baseline tests.
+
+```bash
+# BASE_BRANCH was resolved in Step 3. Diff only test files this branch touched.
+git -C "$TARGET_REPO" diff --name-only "$BASE_BRANCH"...HEAD -- '*test*' '*spec*'
+```
+
+If no test files changed: report "No tests added on this branch — skipping curation." and continue to Step 4.
+
+**Classify each added/modified test:**
+
+| Class | Criteria | Action |
+|-------|----------|--------|
+| KEEP | E2E/integration proving a real workflow; the sole coverage for a behavior with no natural E2E path; a smaller test guarding a distinct failure mode or fixed-bug regression not fully covered by a retained larger test | Leave untouched |
+| AUTO-DELETE | Drop-down/diagnostic test whose behavior is now fully exercised by a retained larger test; trivial happy-path unit duplicating an E2E; internal-helper test with no independent regression value | Delete without asking; list in report |
+| ASK | Overlaps a larger test but may touch an edge it misses; slow test of unclear value; any case where you are not confident coverage is preserved after deletion | List with rationale + recommendation; wait for the user |
+
+**Safety invariants (MANDATORY):**
+
+1. **Coverage preservation:** Never auto-delete a test if doing so leaves a behavior with no retained coverage. If unsure coverage is preserved, downgrade it to ASK.
+2. **Re-run after deletion:** After deletions, re-run the retained suite. It must pass. If a new failure appears (the deleted test was load-bearing — e.g. shared setup), restore that test and reclassify.
+3. **Separate commit:** Commit deletions on their own with a clear message, e.g. `test: curate <feature> suite — remove N diagnostic tests subsumed by E2E`.
+
+**Then print the curation report and continue to Step 4:**
+
+```
+Test curation (vs <base-branch>):
+  Kept (N):
+    - <test> — <representative reason>
+  Deleted (M):
+    - <test> — <why redundant>
+  Need your call (K):        # only if any ASK items
+    - <test> — <overlap/uncertainty> — recommend keep/delete
+Retained suite: <pass/fail> (runtime <before> → <after> if available)
+```
 
 ### Step 4: Present Options
 
@@ -268,6 +310,18 @@ git worktree prune  # Self-healing: clean up any stale registrations
 - **Problem:** Accidentally delete work
 - **Fix:** Require typed "discard" confirmation
 
+**Deleting a test without checking coverage is preserved**
+- **Problem:** Removing the only test that guards a behavior silently drops regression coverage
+- **Fix:** Before auto-deleting, confirm a retained test still covers the behavior; if unsure, downgrade to ASK
+
+**Not re-running the suite after curation deletions**
+- **Problem:** A deleted test may have been load-bearing (shared setup/fixtures), leaving the suite broken
+- **Fix:** Re-run the retained suite after deletions; restore and reclassify if a new failure appears
+
+**Curating pre-existing baseline tests**
+- **Problem:** The gate is meant to stop new bloat, not rewrite history; touching baseline tests is out of scope and risky
+- **Fix:** Only curate tests this branch added or modified (diff vs base branch)
+
 ## Red Flags
 
 **Never:**
@@ -279,6 +333,8 @@ git worktree prune  # Self-healing: clean up any stale registrations
 - Remove a worktree before confirming merge success
 - Clean up worktrees you didn't create (provenance check)
 - Run `git worktree remove` from inside the worktree
+- Auto-delete a test without confirming its behavior stays covered by a retained test
+- Curate (delete) pre-existing baseline tests — only this branch's added/modified tests are in scope
 
 **Always:**
 - Verify tests before offering options
@@ -290,3 +346,4 @@ git worktree prune  # Self-healing: clean up any stale registrations
 - Clean up worktree for Options 1 & 4 only
 - `cd` to main repo root before worktree removal
 - Run `git worktree prune` after removal
+- Re-run the retained suite after curation deletions and confirm it passes

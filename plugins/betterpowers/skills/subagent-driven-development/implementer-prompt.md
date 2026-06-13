@@ -3,7 +3,7 @@
 Use this template when starting the persistent implementer role for an execution run.
 
 ```
-Task tool (general-purpose):
+Task tool (general-purpose, model: sonnet):
   description: "Start implementer role for [plan name]"
   prompt: |
     You are the persistent implementer role for this execution run.

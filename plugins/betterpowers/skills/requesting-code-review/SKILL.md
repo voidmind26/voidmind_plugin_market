@@ -43,7 +43,7 @@ Treat previously accepted work as closed by default. Reopen it only when the cur
 
 **2. Dispatch code reviewer subagent:**
 
-Use Task tool with `general-purpose` type, fill template at `code-reviewer.md`
+Use Task tool with `general-purpose` type and the `sonnet` model, fill template at `code-reviewer.md`
 
 **Placeholders:**
 - `{DESCRIPTION}` - Brief summary of what you built in the current task or phase
