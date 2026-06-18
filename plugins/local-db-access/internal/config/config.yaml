@@ -1,0 +1,26 @@
+default_database: zyb-uos
+databases:
+    gkzy-base:
+        type: mysql
+        enabled: false
+        host: mysql.basic.suanshubang.cc
+        port: 8025
+        user: homework
+        password: 9Lu0w06mBAYr9MsG
+        database: gkzy_base
+    gkzy-base-zyb:
+        type: mysql
+        enabled: true
+        host: mysql.basic.suanshubang.cc
+        port: 8025
+        user: homework
+        password: 9Lu0w06mBAYr9MsG
+        database: gkzy_base_zyb
+    zyb-uos:
+        type: mysql
+        enabled: true
+        host: cetus-zybpt-test-svc.suanshubang.cc
+        port: 8029
+        user: homework
+        password: homework
+        database: qsxl_zybuos

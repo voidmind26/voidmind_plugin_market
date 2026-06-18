@@ -63,6 +63,16 @@
         "email": "voidmind@zuoyebang.cc"
       },
       "source": "./plugins/gateway-platform-plugin"
+    },
+    {
+      "name": "local-db-access",
+      "description": "本地数据库访问插件，提供 MCP 数据库工具与查询/受限写入工作流 skill。",
+      "version": "0.3.3",
+      "author": {
+        "name": "voidmind",
+        "email": "voidmind@zuoyebang.cc"
+      },
+      "source": "./plugins/local-db-access"
     }
   ]
 }

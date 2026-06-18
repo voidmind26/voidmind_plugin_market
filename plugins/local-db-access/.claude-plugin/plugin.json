@@ -1,0 +1,9 @@
+{
+  "name": "local-db-access",
+  "version": "0.3.3",
+  "description": "本地数据库访问插件，提供 MCP 数据库工具与查询/受限写入工作流 skill",
+  "author": {
+    "name": "voidmind",
+    "email": "voidmind@zuoyebang.cc"
+  }
+}

@@ -14,6 +14,7 @@
 │   ├── code-index-plugin/          # 本地代码索引 MCP 插件
 │   ├── fusion-mcp/                 # Fusion 360 MCP 集成
 │   ├── gateway-platform-plugin/    # 本地 HTTP MCP 网关与 Web Console
+│   ├── local-db-access/            # 本地数据库访问 MCP 插件
 │   └── plugin-template/            # 插件模板（新建插件时复制）
 ├── CLAUDE.md
 └── README.md
@@ -29,6 +30,7 @@
 | [code-index-plugin](plugins/code-index-plugin/) | 0.1.2 | 为当前项目构建本地代码索引并提供搜索、刷新、状态查询的 MCP 工具 |
 | [fusion-mcp](plugins/fusion-mcp/) | 0.1.0 | Autodesk Fusion 360 MCP 集成 |
 | [gateway-platform-plugin](plugins/gateway-platform-plugin/) | 1.0.1 | 本地 HTTP MCP 网关平台，提供 route、secret、动态注入与 Web Console |
+| [local-db-access](plugins/local-db-access/) | 0.3.3 | 本地数据库访问 MCP 插件，提供查询、受限写入和连接配置初始化能力 |
 
 ## 添加新插件
 
