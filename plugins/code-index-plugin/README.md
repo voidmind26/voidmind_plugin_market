@@ -23,6 +23,7 @@
 ```text
 code-index-plugin/
 ├── .claude-plugin/plugin.json
+├── .codex-plugin/plugin.json
 ├── .mcp.json
 ├── README.md
 ├── build.sh
@@ -49,7 +50,7 @@ code-index-plugin/
 
 ## MCP 工具
 
-插件通过 `.mcp.json` 注册本地 `stdio` MCP 服务，提供 4 个工具：
+插件通过 `.mcp.json` 注册本地 `stdio` MCP 服务，配置中显式使用 `"cwd": "."`，以插件目录为工作目录启动，不依赖 `CLAUDE_PLUGIN_ROOT`。服务提供 4 个工具：
 
 ### 1. `build_code_index`
 构建当前项目的本地索引。

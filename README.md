@@ -6,7 +6,9 @@
 
 ```text
 ├── .claude-plugin/
-│   └── marketplace.json       # 市场级插件清单，注册所有插件来源
+│   └── marketplace.json       # 旧版 zcode / Claude 插件市场清单
+├── .agents/
+│   └── plugins/marketplace.json # Codex repo-local 插件市场清单
 ├── plugins/                   # 插件目录，每个子目录为一个独立插件
 │   ├── apifox-codegen-plugin/      # Apifox 接口文档与测试用例生成
 │   ├── backend-construct-plugin/   # 后端 plan 统一入口
@@ -35,11 +37,13 @@
 ## 添加新插件
 
 1. 复制 `plugins/plugin-template` 到 `plugins/<plugin-name>/`
-2. 修改 `plugins/<plugin-name>/.claude-plugin/plugin.json`
+2. 修改 `plugins/<plugin-name>/.claude-plugin/plugin.json` 和 `plugins/<plugin-name>/.codex-plugin/plugin.json`
 3. 按需创建 `commands/`、`agents/`、`skills/`、`hooks/` 或 `.mcp.json`
-4. 更新 `.claude-plugin/marketplace.json` 注册插件来源
+4. 更新 `.claude-plugin/marketplace.json` 和 `.agents/plugins/marketplace.json` 注册插件来源
 5. 更新本 `README.md` 的插件列表
 
 ## 插件规范
 
-每个插件需包含 `.claude-plugin/plugin.json`，遵循标准 zcode 插件结构。插件内部引用路径优先使用 `${CLAUDE_PLUGIN_ROOT}`，避免硬编码本机绝对路径。
+每个插件保留 `.claude-plugin/plugin.json` 兼容旧版 zcode / Claude 插件结构，同时新增 `.codex-plugin/plugin.json` 供 Codex Desktop 识别。
+
+`stdio` MCP 插件的 `.mcp.json` 应显式设置 `"cwd": "."`，并使用插件目录内的相对路径启动二进制，避免依赖 `${CLAUDE_PLUGIN_ROOT}`。HTTP MCP 插件可继续使用固定本地或远端 URL。

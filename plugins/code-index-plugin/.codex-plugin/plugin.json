@@ -1,0 +1,33 @@
+{
+  "name": "code-index-plugin",
+  "version": "0.1.2",
+  "description": "为当前项目构建本地代码索引并提供搜索、刷新、状态查询的 MCP 工具。",
+  "author": {
+    "name": "voidmind"
+  },
+  "keywords": [
+    "code-index",
+    "search",
+    "mcp",
+    "go"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Code Index",
+    "shortDescription": "构建并搜索本地代码索引。",
+    "longDescription": "为当前项目构建文件、符号和代码块索引，并通过 MCP 工具提供构建、刷新、搜索和状态查询能力。",
+    "developerName": "voidmind",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Skills",
+      "MCP",
+      "Read"
+    ],
+    "defaultPrompt": [
+      "为当前项目构建代码索引",
+      "搜索这个功能的实现位置",
+      "刷新当前项目代码索引"
+    ]
+  }
+}

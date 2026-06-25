@@ -1,0 +1,29 @@
+{
+  "name": "plugin-template",
+  "version": "1.0.0",
+  "description": "插件模板，新建插件时复制此目录",
+  "author": {
+    "name": "voidmind"
+  },
+  "keywords": [
+    "template",
+    "plugin",
+    "codex"
+  ],
+  "interface": {
+    "displayName": "Plugin Template",
+    "shortDescription": "用于复制的新插件模板。",
+    "longDescription": "提供新建插件时可复制的基础目录与 manifest 模板，便于同时兼容旧 Claude 插件结构和 Codex 插件结构。",
+    "developerName": "voidmind",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Template",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "基于模板创建一个新的 Codex 插件",
+      "检查插件模板是否符合规范",
+      "为新插件补齐 manifest 元数据"
+    ]
+  }
+}

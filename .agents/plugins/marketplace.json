@@ -1,0 +1,104 @@
+{
+  "name": "voidmind-plugin-market",
+  "interface": {
+    "displayName": "Voidmind Plugin Market"
+  },
+  "plugins": [
+    {
+      "name": "apifox-codegen-plugin",
+      "source": {
+        "source": "local",
+        "path": "./plugins/apifox-codegen-plugin"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "backend-construct-plugin",
+      "source": {
+        "source": "local",
+        "path": "./plugins/backend-construct-plugin"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "betterpowers",
+      "source": {
+        "source": "local",
+        "path": "./plugins/betterpowers"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "code-index-plugin",
+      "source": {
+        "source": "local",
+        "path": "./plugins/code-index-plugin"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "fusion-mcp",
+      "source": {
+        "source": "local",
+        "path": "./plugins/fusion-mcp"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "gateway-platform-plugin",
+      "source": {
+        "source": "local",
+        "path": "./plugins/gateway-platform-plugin"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "local-db-access",
+      "source": {
+        "source": "local",
+        "path": "./plugins/local-db-access"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "plugin-template",
+      "source": {
+        "source": "local",
+        "path": "./plugins/plugin-template"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

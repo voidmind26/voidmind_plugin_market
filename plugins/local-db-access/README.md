@@ -20,6 +20,7 @@
 ```text
 local-db-access/
 ├── .claude-plugin/plugin.json
+├── .codex-plugin/plugin.json
 ├── .mcp.json
 ├── README.md
 ├── build.sh
@@ -42,7 +43,7 @@ local-db-access/
 
 ## MCP 接入方式
 
-插件通过根目录下的 `.mcp.json` 注册本地 `stdio` MCP 服务。
+插件通过根目录下的 `.mcp.json` 注册本地 `stdio` MCP 服务，配置中显式使用 `"cwd": "."`，以插件目录为工作目录启动，不依赖 `CLAUDE_PLUGIN_ROOT`。
 
 - 服务名：`local-db`
 - 启动方式：优先使用预编译的 `bin/local-db-access-mcp` 二进制文件；若不存在则自动编译后运行

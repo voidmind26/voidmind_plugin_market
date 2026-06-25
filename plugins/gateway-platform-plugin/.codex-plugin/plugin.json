@@ -1,0 +1,33 @@
+{
+  "name": "gateway-platform-plugin",
+  "version": "1.0.1",
+  "description": "本地 HTTP MCP 网关平台插件，提供 route、secret、动态注入与 Web Console。",
+  "author": {
+    "name": "voidmind",
+    "email": "voidmind@zuoyebang.cc"
+  },
+  "keywords": [
+    "gateway",
+    "mcp",
+    "proxy",
+    "web-console"
+  ],
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Gateway Platform",
+    "shortDescription": "本地 MCP HTTP 网关与控制台。",
+    "longDescription": "提供本地 HTTP MCP 网关、路由配置、凭据管理、请求注入和 Web Console，便于把内部系统统一接入 Codex。",
+    "developerName": "voidmind",
+    "category": "Developer Tools",
+    "capabilities": [
+      "MCP",
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "检查本地 MCP 网关是否可用",
+      "查看当前网关路由配置",
+      "打开网关 Web Console"
+    ]
+  }
+}

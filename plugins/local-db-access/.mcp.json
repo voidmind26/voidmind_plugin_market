@@ -1,10 +1,11 @@
 {
   "mcpServers": {
     "local-db": {
+      "cwd": ".",
       "command": "bash",
       "args": [
         "-lc",
-        "cd \"$CLAUDE_PLUGIN_ROOT\"; BIN=\"$CLAUDE_PLUGIN_ROOT/bin/local-db-access-mcp\"; if [ ! -x \"$BIN\" ]; then ./build.sh; fi; exec \"$BIN\""
+        "BIN=\"./bin/local-db-access-mcp\"; if [ ! -x \"$BIN\" ] || [ ./build.sh -nt \"$BIN\" ] || [ ./go.mod -nt \"$BIN\" ] || [ ./go.sum -nt \"$BIN\" ] || find ./cmd ./internal -type f -newer \"$BIN\" -print -quit | grep -q .; then bash ./build.sh; fi; exec \"$BIN\""
       ]
     }
   }

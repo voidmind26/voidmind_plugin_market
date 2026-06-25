@@ -64,7 +64,11 @@ type WriteConfigResult struct {
 func ConfigPath() (string, error) {
 	root := os.Getenv(pluginRootEnv)
 	if root == "" {
-		return "", fmt.Errorf("环境变量 %s 未设置", pluginRootEnv)
+		wd, err := os.Getwd()
+		if err != nil {
+			return "", fmt.Errorf("获取当前工作目录失败: %w", err)
+		}
+		root = wd
 	}
 	return filepath.Join(root, internalConfigPath), nil
 }

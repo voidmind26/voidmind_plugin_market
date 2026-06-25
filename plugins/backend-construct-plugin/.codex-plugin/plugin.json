@@ -1,0 +1,33 @@
+{
+  "name": "backend-construct-plugin",
+  "version": "0.2.2",
+  "description": "后端 plan 阶段统一入口插件，提供标签驱动计划与复杂任务辅助",
+  "author": {
+    "name": "voidmind",
+    "email": "voidmind@zuoyebang.cc"
+  },
+  "keywords": [
+    "backend",
+    "planning",
+    "go",
+    "architecture"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Backend Construct",
+    "shortDescription": "按后端分层生成实现计划。",
+    "longDescription": "识别后端开发任务涉及的 controller、service、data、router 等分层，并生成贴合项目规范的实现计划。",
+    "developerName": "voidmind",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Skills",
+      "Planning",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "为这个后端接口变更生成实现计划",
+      "判断这次后端任务涉及哪些分层",
+      "按当前项目规范拆解后端开发步骤"
+    ]
+  }
+}

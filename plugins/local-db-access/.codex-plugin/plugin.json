@@ -1,0 +1,35 @@
+{
+  "name": "local-db-access",
+  "version": "0.3.3",
+  "description": "本地数据库访问插件，提供 MCP 数据库工具与查询/受限写入工作流 skill",
+  "author": {
+    "name": "voidmind",
+    "email": "voidmind@zuoyebang.cc"
+  },
+  "keywords": [
+    "database",
+    "mysql",
+    "mcp",
+    "testing"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Local DB Access",
+    "shortDescription": "安全访问本地或测试数据库。",
+    "longDescription": "通过 MCP 工具列库、看表结构、执行只读 SQL、执行受限写入 SQL，并提供数据库连接配置初始化流程。",
+    "developerName": "voidmind",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Skills",
+      "MCP",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "先列出有哪些测试库",
+      "查看这个表的结构和样本数据",
+      "执行一条只读 SQL 查询"
+    ]
+  }
+}

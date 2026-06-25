@@ -1,10 +1,11 @@
 {
   "mcpServers": {
     "code-index": {
+      "cwd": ".",
       "command": "bash",
       "args": [
         "-lc",
-        "BIN=\"$CLAUDE_PLUGIN_ROOT/bin/code-index-mcp\"; if [ ! -f \"$BIN\" ]; then cd \"$CLAUDE_PLUGIN_ROOT\" && GOWORK=off go build -o \"$BIN\" ./cmd/code-index-mcp; fi; exec \"$BIN\""
+        "BIN=\"./bin/code-index-mcp\"; if [ ! -x \"$BIN\" ] || [ ./build.sh -nt \"$BIN\" ] || [ ./go.mod -nt \"$BIN\" ] || [ ./go.sum -nt \"$BIN\" ] || find ./cmd ./internal ./skills -type f -newer \"$BIN\" -print -quit | grep -q .; then bash ./build.sh; fi; exec \"$BIN\""
       ]
     }
   }
