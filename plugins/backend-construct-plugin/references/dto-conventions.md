@@ -50,8 +50,9 @@ AppId string `json:"app_id" form:"app_id"` // 应用ID
 
 ## Change Impact
 
-命中 `dto` 标签时，计划应同时检查：
+修改 DTO 时同时检查：
 
 - controller 参数绑定是否受影响
 - service 返回结构是否受影响
 - 接口响应兼容性是否需要额外说明
+- 校验规则、可选字段和零值语义是否保持兼容

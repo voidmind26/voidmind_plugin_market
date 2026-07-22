@@ -36,4 +36,4 @@ func startCycle(engine *gin.Engine) {
 
 - 任务失败时返回 `nil`，避免同类错误被周期调度重复放大。
 - 多实例部署时优先补分布式锁或等价互斥方案。
-- 若任务只改入口 wiring，不默认追加 controller/router 计划。
+- 若任务只改入口 wiring，不默认追加 controller/router 代码。

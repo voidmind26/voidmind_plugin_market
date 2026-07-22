@@ -1,39 +1,32 @@
 # backend-construct-plugin
 
-面向后端 plan 阶段的 Claude Code 插件骨架，用于在开始实现前先收敛计划范围、确认涉及的后端层，并选择合适的规划入口。
+面向 Go 后端代码开发的独立规范插件。它从目标仓库提取真实约定，按最小分层范围加载规范，直接生成或修改代码并完成验证。
 
 ## 边界
 
-- 仅覆盖后端场景
-- 仅介入 plan 阶段，不覆盖编码、联调、提测等后续流程
-- agent 仅在复杂任务时作为辅助，不是默认路径
+- 覆盖 DTO、model/data、service、controller、router、task 和日志相关的后端开发。
+- 不绑定任何计划目录、执行模式、subagent 或外部工作流插件。
+- 不强推固定框架；目标项目的仓库指令和现有实现优先于插件示例。
+- 不因常见完整链路自动扩大修改范围。
 
-## 核心概念
+## 核心技能
 
-- **分层标签**：由固定原子层和灵活组合组成。原子层覆盖 dto、data、service、controller、router、task 等后端层；若需求涉及持久化实体、表结构映射或缓存对象结构，统一并入 `data` 处理。组合仅用于确认本次 plan 实际涉及哪些层。
-- **`backend-dev`**：统一入口 skill，负责进入后端 plan 工作流、做初步标签判断与路由，不直接承担完整 plan 生成。
-- **`write-plans-with-construct`**：标签驱动的 plan skill，根据分层标签产出实现计划。
-- **`backend-plan-agent`**：复杂任务辅助 plan agent，在任务跨度大、依赖多或需要拆解阶段时介入。
+- **`backend-dev`**：识别必要分层，读取项目代码与对应规范，直接实施代码修改并验证。
 
-## Workflow
+## 工作方式
 
-1. 先通过 `backend-dev` 进入后端 plan 工作流。
-2. 用分层标签确认本次计划涉及的后端层。
-3. 常规任务直接进入 `write-plans-with-construct` 生成计划。
-4. 复杂任务再引入 `backend-plan-agent` 辅助拆解，然后回到 `write-plans-with-construct` 落计划。
-
-## 提供什么
-
-- 后端 plan 阶段统一入口
-- 基于分层标签的计划生成
-- 复杂任务场景下的辅助规划能力
-- `references/knowledge-map.md` 作为统一索引，维护标签到 `knowledge/`、`references/`、`examples/` 的路由规则
-- `examples/` 下的最小代码模板，用于承接不适合放进主 knowledge 的具体写法示例，包括 DTO、Model/Data、Controller/Router、Task/Logging 等场景
+1. 读取仓库指令、工作区状态、目标调用链和相邻实现。
+2. 用 `dto / data / service / controller / router / task` 标签确定最小变更面。
+3. 通过 `references/knowledge-map.md` 渐进加载命中层资料。
+4. 按项目现有结构直接实现代码，同步必要调用方与测试。
+5. 从聚焦检查到真实业务链路完成验证。
 
 ## 知识结构
 
-- `knowledge/layering.md`：全局原则文档，定义最小变更面与分层职责边界。
-- `references/knowledge-map.md`：统一索引文档，定义标签如何路由到 `knowledge/`、`references/`、`examples/`。
-- `knowledge/`：高层规则与边界约束。
-- `references/`：细规则、目录约定、禁忌项、签名模式。
-- `examples/`：最小代码模板，用于需要具体写法时提供参考。
+- `knowledge/layering.md`：分层职责和最小变更面。
+- `references/knowledge-map.md`：标签到规范资产的读取索引。
+- `knowledge/`：各层高层规则与边界约束。
+- `references/`：字段、签名、目录、禁忌项和验证准则。
+- `examples/`：项目缺少相邻实现时使用的最小代码形态参考。
+
+示例不是模板真相。若示例与目标项目冲突，以用户要求、仓库指令和项目现有代码为准。

@@ -1,33 +1,34 @@
 {
   "name": "backend-construct-plugin",
-  "version": "0.2.2",
-  "description": "后端 plan 阶段统一入口插件，提供标签驱动计划与复杂任务辅助",
+  "version": "0.3.0+codex.20260721123033",
+  "description": "\u72ec\u7acb\u7684 Go \u540e\u7aef\u4ee3\u7801\u89c4\u8303\u4e0e\u5b9e\u73b0\u63d2\u4ef6\uff0c\u6309\u9879\u76ee\u7ea6\u5b9a\u6307\u5bfc\u4ee3\u7801\u751f\u6210",
   "author": {
     "name": "voidmind",
     "email": "voidmind@zuoyebang.cc"
   },
   "keywords": [
     "backend",
-    "planning",
+    "code-generation",
+    "standards",
     "go",
     "architecture"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Backend Construct",
-    "shortDescription": "按后端分层生成实现计划。",
-    "longDescription": "识别后端开发任务涉及的 controller、service、data、router 等分层，并生成贴合项目规范的实现计划。",
+    "shortDescription": "\u6309\u9879\u76ee\u89c4\u8303\u751f\u6210\u548c\u4fee\u6539 Go \u540e\u7aef\u4ee3\u7801\u3002",
+    "longDescription": "\u8bfb\u53d6\u76ee\u6807\u4ed3\u5e93\u7ea6\u5b9a\uff0c\u8bc6\u522b DTO\u3001data\u3001service\u3001controller\u3001router\u3001task \u7b49\u5fc5\u8981\u5206\u5c42\uff0c\u76f4\u63a5\u751f\u6210\u6216\u4fee\u6539\u4ee3\u7801\u5e76\u5b8c\u6210\u9a8c\u8bc1\u3002",
     "developerName": "voidmind",
     "category": "Developer Tools",
     "capabilities": [
       "Skills",
-      "Planning",
-      "Write"
+      "Write",
+      "Testing"
     ],
     "defaultPrompt": [
-      "为这个后端接口变更生成实现计划",
-      "判断这次后端任务涉及哪些分层",
-      "按当前项目规范拆解后端开发步骤"
+      "\u6309\u5f53\u524d\u9879\u76ee\u89c4\u8303\u65b0\u589e\u8fd9\u4e2a Go \u540e\u7aef\u63a5\u53e3",
+      "\u4fee\u6539 service \u548c data \u903b\u8f91\u5e76\u8865\u5145\u9a8c\u8bc1",
+      "\u6309\u73b0\u6709\u4ee3\u7801\u98ce\u683c\u5b9e\u73b0\u8fd9\u4e2a\u5b9a\u65f6\u4efb\u52a1"
     ]
   }
 }

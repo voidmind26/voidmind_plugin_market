@@ -1,16 +1,95 @@
 ---
 name: code-index-search
-description: Use when the user asks to locate code structure or implementation details and a local code index can narrow the search scope before reading files.
-allowed-tools:
-  - mcp__plugin_code-index-plugin_code-index__search_code_index
-  - mcp__plugin_code-index-plugin_code-index__get_code_index_status
-  - mcp__plugin_code-index-plugin_code-index__build_code_index
+description: 用于定位代码结构、实现位置、符号定义与引用、调用影响、类型信息或诊断信息。当本地代码索引或 LSP 能帮助理解当前项目时使用；若当前会话真实提供且语言服务状态健康，则将 LSP 作为符号语义事实的高置信信源，静态索引用于发现候选与回退，源码用于解释业务上下文。
 ---
 
-1. Extract concise search terms from the user request.
-2. Call `get_code_index_status` to check whether a code index already exists for the project.
-3. If `ready=false` or the index does not exist, call `build_code_index` first to create the index.
-4. Call `search_code_index` with the query.
-5. Prefer `prefer_deep_hits=true` when the user is asking for concrete implementation points such as functions or handlers.
-6. Return the top hits with kind, path, line range, summary, and score reason.
-7. Only read source files after the index has narrowed the scope.
+# Code Index Search
+
+使用静态代码索引发现候选位置，使用当前会话实际可用的 LSP 工具确认符号语义。LSP 状态健康且返回成功时，将其结果作为定义、引用、类型、符号结构和诊断的首要证据。
+
+## 信源优先级
+
+按问题类型使用不同信源：
+
+1. 符号定义、引用、类型、签名、文档符号和诊断：优先采用健康 LSP 的成功结果。
+2. 业务规则、控制流和运行语义：读取 LSP 定位后的源码进行解释。
+3. 候选文件、模块和标识符发现：使用静态代码索引。
+4. LSP 或索引不可用、无结果时：使用文本搜索和源码调用关系回退。
+
+不要要求每个 LSP 结果都先被文本搜索重复证明。只有结果与当前工作区明显冲突时，才检查项目根目录、文件版本、位置和语言服务状态。
+
+## 工具边界
+
+静态索引流程使用：
+
+- `get_code_index_status`
+- `build_code_index`
+- `search_code_index`
+
+当前会话真实提供对应能力时，主动使用以下 LSP 工具：
+
+- `get_lsp_status`
+- `lsp_document_symbols`
+- `lsp_definition`
+- `lsp_references`
+- `lsp_hover`
+- `lsp_diagnostics`
+
+不要因为本文列出了工具名，就假设插件已经注册了这些工具。工具不存在时直接走静态回退，不要调用 shell 启动语言服务器，也不要安装 `gopls`、TypeScript language server 或其他依赖。
+
+## 查询流程
+
+### 1. 判断查询意图
+
+将请求归入一个或多个目标：
+
+- 定位模块或候选文件：使用静态索引；候选中存在明确符号时，用 LSP 确认实际定义。
+- 定位 handler、函数或实现逻辑：静态定位后默认使用 `lsp_document_symbols` 或 `lsp_definition` 消除同名命中歧义。
+- 查找调用方、依赖关系或变更影响：使用 `lsp_references`，静态搜索只补充 LSP 无法覆盖的动态注册或字符串引用。
+- 查看类型、签名、接口或文档：使用 `lsp_hover`；需要源码语义时再读取定义文件。
+- 查看文件内结构：使用 `lsp_document_symbols`，而不是仅依赖正则或文件摘要。
+- 排查编译、类型或语义问题：使用 `lsp_diagnostics`，再读取对应代码解释原因。
+
+### 2. 用静态索引缩小范围
+
+用户已经给出可靠文件与位置，并且对应 LSP 工具可用、服务状态健康时，跳过静态索引构建与搜索，直接进入 LSP 查询；只有语义结果不足时再回到本节。
+
+1. 从用户请求中提取简洁搜索词，优先保留标识符、路由、配置键和领域名词。
+2. 调用 `get_code_index_status` 检查项目索引。
+3. 当 `ready=false` 或索引不存在时，调用 `build_code_index`。
+4. 调用 `search_code_index`；查找具体函数、handler 或实现点时设置 `prefer_deep_hits=true`。
+5. 必要时使用 `path_prefix` 和更精确的标识符进行第二次查询，避免一次读取大量候选文件。
+6. 保留命中的 `kind`、路径、行范围、摘要和评分原因，作为静态索引证据。
+
+### 3. 使用 LSP 确认语义
+
+当前会话存在 LSP 工具时，将 LSP 作为语义查询的默认确认阶段，不要求用户预先提供精确位置：
+
+1. 尽早确认所需 LSP 工具是否真实可用，并调用 `get_lsp_status` 检查项目、语言和服务状态。
+2. 用户给出文件和位置时直接进入对应语义查询；没有位置时，先用静态索引定位候选文件，再读取最小代码片段确定目标 token。
+3. 对需要位置的操作，转换为工具要求的零基 `line` 和 `character`。不要把静态索引返回的展示行号直接当作 LSP 零基位置。
+4. 根据意图调用对应工具；一个问题需要多种语义事实时可以组合调用，例如先用 definition 确认目标，再用 references 评估影响。
+5. 将成功结果作为高置信语义证据。读取目标源码是为了解释上下文，不是强制用文本搜索重新证明 LSP。
+6. 若 LSP 与源码观察冲突，先检查是否选错工作区、文件、token 或位置，以及语言服务是否读取了当前磁盘版本；确认异常后再降级。
+
+不要无目的调用所有 LSP 工具。可靠信源仍应围绕用户问题收集最小充分证据。
+
+### 4. 可靠回退
+
+遇到以下情况时回退到静态索引与源码读取：
+
+- 当前会话没有对应 LSP 工具。
+- `get_lsp_status` 表示语言服务器不可用或语言不受支持。
+- 经索引定位和最小源码读取后仍无法可靠确定文件或位置。
+- LSP 返回 `lsp_unavailable`、`unsupported_language`、`position_invalid`、`no_result` 或等价结果。
+- LSP 结果与当前工作区源码明显不一致。
+
+回退不是失败。继续使用索引命中、文本搜索和源码调用关系回答，并明确说明哪些结论未经 LSP 确认。不要把 LSP 不可用误写成 LSP 否定了某个定义或引用。
+
+## 输出要求
+
+- 先给最相关的结论，再列文件路径和精确行号。
+- 将健康 LSP 的成功结果标为“LSP 语义确认”，并优先呈现；同时区分静态索引命中与源码解释。
+- 定义或引用查询优先返回目标位置及少量关键上下文，不倾倒全部结果。
+- LSP 不可用时简洁说明回退原因，不把语言服务器 stderr 原样输出。
+- 只有索引已经缩小范围后才读取源码；若索引结果明显不足，可用文本搜索补充，但要说明证据来源。

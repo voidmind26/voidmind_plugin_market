@@ -18,8 +18,8 @@
     },
     {
       "name": "backend-construct-plugin",
-      "description": "后端 plan 阶段统一入口插件，提供标签驱动计划与复杂任务辅助",
-      "version": "0.2.2",
+      "description": "独立的 Go 后端代码规范与实现插件，按项目约定指导代码生成",
+      "version": "0.3.0",
       "author": {
         "name": "voidmind",
         "email": "voidmind@zuoyebang.cc"
@@ -37,8 +37,8 @@
     },
     {
       "name": "code-index-plugin",
-      "description": "为当前项目构建本地代码索引并提供搜索、刷新、状态查询的 Claude Code 插件。",
-      "version": "0.1.2",
+      "description": "构建并搜索本地代码索引，在工具可用时以 LSP 作为高置信语义信源。",
+      "version": "0.1.3",
       "author": {
         "name": "voidmind"
       },

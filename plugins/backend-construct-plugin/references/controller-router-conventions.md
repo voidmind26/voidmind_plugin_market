@@ -47,7 +47,7 @@ func GetFlowConfig(ctx *gin.Context)
 
 - Router 只负责路由注册与中间件接线。
 - 不在 router 层混入业务逻辑。
-- 只在命中 `router` 标签时安排路径挂载或中间件绑定调整。
+- 只在确实需要修改 `router` 时调整路径挂载或中间件绑定。
 
 ## Minimal Example
 

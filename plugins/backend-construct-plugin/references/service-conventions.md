@@ -18,7 +18,7 @@
 1. 结构体方法模式
 2. 单例实例模式
 
-若项目已有 `Instance = &Service{}` 风格，新增逻辑优先复用，不在 plan 阶段切换模式。
+若项目已有 `Instance = &Service{}` 风格，新增逻辑优先复用，不在当前业务修改中切换模式。
 
 ## Signature Pattern
 
@@ -35,7 +35,7 @@ func (s *Service) MethodName(ctx *gin.Context, req *dto.Req) (*dto.Resp, error)
 - Service 负责业务编排，不负责直接拼 SQL。
 - Service 不直接承载复杂 Redis 命令细节，应通过 data/cache 层封装。
 - 必须检查是否引入 N+1 查询。
-- 若项目已有“禁止联表”约束，计划中应显式保留，不因当前需求放宽。
+- 若项目已有“禁止联表”约束，实现中必须保留，不因当前需求放宽。
 
 ## Logging
 

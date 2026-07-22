@@ -25,7 +25,7 @@
 - `GetID()`
 - `SoftDeleted()`
 
-若项目存在统一 BaseModel 封装，优先复用，不在 plan 中重新设计 ORM 基类。
+若项目存在统一 BaseModel 封装，优先复用，不在当前业务修改中重新设计 ORM 基类。
 
 ## Type Conventions
 
@@ -41,7 +41,7 @@
 - `XxxModelIns *XxxModel`
 - `InitBaseXxx(db *gorm.DB)`
 
-计划命中 model/data 时，应检查是否需要同步更新初始化入口。
+修改 model/data 时，应检查是否需要同步更新初始化入口。
 
 ## Redis Model
 
@@ -56,5 +56,5 @@ Redis 结构体与 MySQL model 不同：
 若项目存在分表模型：
 
 - 构造函数通常需要接收分表键
-- 不要在 plan 阶段把普通表与分表模型混成一类
+- 不要把普通表与分表模型混成一类
 - 必须单独说明分表键来源和影响范围

@@ -26,8 +26,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - 根级 `.claude-plugin/marketplace.json` 是插件市场注册源，新增、删除或升级插件时同步维护这里和 `README.md` 的插件列表。
 - 每个 `plugins/<plugin-name>/` 是独立插件边界；插件内部引用路径优先使用 `${CLAUDE_PLUGIN_ROOT}`，不要写死本机绝对路径。
-- `apifox-codegen-plugin`、`backend-construct-plugin`、`betterpowers` 主要提供 skills/agents/hooks 等 Claude Code 行为组件；修改 skill 内容时优先保持触发描述、工作流边界和参考文档一致。
-- `code-index-plugin` 是 Go MCP 插件，提供本地代码索引的构建、刷新、搜索和状态查询能力；索引数据写入使用方项目的 `.claude/code-index/`。
+- `apifox-codegen-plugin`、`backend-construct-plugin`、`betterpowers` 主要提供 skills/agents/hooks 等 Claude Code 行为组件；修改 skill 内容时优先保持触发描述、工作流边界和参考文档一致。`backend-construct-plugin` 是独立的后端代码规范与实现插件，不依赖 `betterpowers`。
+- `code-index-plugin` 是 Go MCP 插件，提供本地代码索引的构建、刷新、搜索和状态查询能力；查询 skill 使用静态索引发现候选，并在会话真实提供且状态健康时将 LSP 作为高置信语义信源。索引数据写入使用方项目的 `.claude/code-index/`。
 - `gateway-platform-plugin` 是复合插件：Go MCP/HTTP 服务负责本地网关与 SQLite 数据，`frontend/` 是 Vue Web Console，构建产物会复制到 `server/router/frontend_dist/` 供 Go 服务内嵌。
 - `fusion-mcp` 通过 `.mcp.json` 接入 Fusion 360 MCP 能力，当前主要是外部 MCP 集成配置。
 
@@ -43,7 +43,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 插件 | 主要组件 |
 |------|----------|
 | `plugins/apifox-codegen-plugin/` | skills: `apifox-dev`, `generate-interfaces-from-code`, `generate-scenario-tests`; Apifox HTTP MCP 配置 |
-| `plugins/backend-construct-plugin/` | agents: `backend-plan-agent`; skills: `backend-dev`, `write-plans-with-construct`; `knowledge/`、`references/`、`examples/` |
+| `plugins/backend-construct-plugin/` | skill: `backend-dev`; 后端代码规范资产：`knowledge/`、`references/`、`examples/` |
 | `plugins/betterpowers/` | hooks; 通用开发流程 skills，如 `brainstorming`、`test-driven-development`、`systematic-debugging`、`writing-plans` 等 |
 | `plugins/code-index-plugin/` | Go MCP 服务; skills: `code-index-init`, `code-index-refresh`, `code-index-search` |
 | `plugins/fusion-mcp/` | Fusion 360 MCP 集成配置 |

@@ -1,28 +1,10 @@
 # Task
 
-- `task` 标签仅用于定时任务、周期任务、任务中心或后台 worker 入口变更。
-- 命中 `task` 时，应明确是否同时涉及 `service`。
-- 普通接口请求链路中的异步处理，不因“有后台动作”就默认标成 `task`。
-- 不因为存在定时任务背景就默认补 controller/router 计划。
-
-## 规则补充
-
-- 若项目已有任务目录约定，优先沿用 `controllers/command/job_<name>.go` 或现有等价结构，不在计划中凭空发明新入口布局。
-- 多实例部署下若任务有并发重复执行风险，应显式考虑分布式锁或等价互斥方案。
-- 若项目已有“任务失败返回 nil 避免重复报错”之类运行规则，应在计划中保留，不要遗漏运行期约束。
-- 任务计划应单独说明：调度入口、执行周期、是否受时间窗口限制、是否复用现有 service。
-
-## 最小示例
-
-```go
-const JobRefreshConfigCycle = 5
-
-func JobRefreshConfig(ctx *gin.Context) error {
-    if err := service.Instance.RefreshConfig(ctx); err != nil {
-        zlog.Errorf(ctx, "[JobRefreshConfig] failed, err:%v", err)
-        return nil
-    }
-    zlog.Infof(ctx, "[JobRefreshConfig] success")
-    return nil
-}
-```
+- `task` 只用于定时任务、周期任务、任务中心或后台 worker 入口变更。
+- 任务入口负责调度与运行约束，业务逻辑优先复用 service。
+- 普通请求链路中的异步处理不自动归为 `task`。
+- 明确执行周期、时间窗口、超时、重入、幂等和多实例并发语义。
+- 多实例下存在重复执行风险时，复用项目已有分布式锁或等价互斥机制。
+- 沿用项目对 panic 恢复、失败返回值、重试和告警的约定，不自行改变调度器语义。
+- 新增任务后同步检查注册入口、配置开关、生命周期和可观测性。
+- 不因存在任务背景而添加 controller 或 router 改动。
