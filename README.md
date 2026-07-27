@@ -29,7 +29,7 @@
 | [apifox-codegen-plugin](plugins/apifox-codegen-plugin/) | 0.1.1 | 从 Go Web 代码生成 Apifox 接口文档与场景化测试用例 |
 | [backend-construct-plugin](plugins/backend-construct-plugin/) | 0.3.0 | 按项目约定指导 Go 后端代码生成、修改与验证 |
 | [betterpowers](plugins/betterpowers/) | 5.1.5 | 优化版 superpowers，包含多项开发技能、钩子与工作流 |
-| [code-index-plugin](plugins/code-index-plugin/) | 0.1.3 | 使用索引发现候选，并在工具可用时优先采用 LSP 语义结果 |
+| [code-index-plugin](plugins/code-index-plugin/) | 0.2.0 | 使用静态索引发现候选，并通过 gopls 原生 MCP 确认 Go 语义 |
 | [fusion-mcp](plugins/fusion-mcp/) | 0.1.0 | Autodesk Fusion 360 MCP 集成 |
 | [gateway-platform-plugin](plugins/gateway-platform-plugin/) | 1.0.1 | 本地 HTTP MCP 网关平台，提供 route、secret、动态注入与 Web Console |
 | [local-db-access](plugins/local-db-access/) | 0.3.3 | 本地数据库访问 MCP 插件，提供查询、受限写入和连接配置初始化能力 |
@@ -46,4 +46,4 @@
 
 每个插件保留 `.claude-plugin/plugin.json` 兼容旧版 zcode / Claude 插件结构，同时新增 `.codex-plugin/plugin.json` 供 Codex Desktop 识别。
 
-`stdio` MCP 插件的 `.mcp.json` 应显式设置 `"cwd": "."`，并使用插件目录内的相对路径启动二进制，避免依赖 `${CLAUDE_PLUGIN_ROOT}`。HTTP MCP 插件可继续使用固定本地或远端 URL。
+使用插件内相对路径启动二进制的 `stdio` MCP，应显式设置 `"cwd": "."`，避免依赖 `${CLAUDE_PLUGIN_ROOT}`。需要分析使用方工作区的外部 MCP 不得固定到插件目录，例如 `code-index-plugin` 注册的 `gopls mcp` 会继承当前项目工作目录。HTTP MCP 插件可继续使用固定本地或远端 URL。

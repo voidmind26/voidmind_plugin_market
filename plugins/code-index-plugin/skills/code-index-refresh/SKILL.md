@@ -7,8 +7,9 @@ allowed-tools:
   - mcp__plugin_code-index-plugin_code-index__build_code_index
 ---
 
-1. Call `get_code_index_status` first when you do not know whether an index exists yet.
-2. If `ready=false`, tell the user to initialize the index first or call `build_code_index` directly if they asked for a rebuild.
-3. Call `refresh_code_index` to rescan the project and update the stored index.
-4. Report added, changed, deleted, and unchanged file counts together with the refreshed totals.
-5. If refresh fails because index files are missing or invalid, surface the error and recommend rebuilding.
+1. 不确定索引是否存在时，先调用 `get_code_index_status`。
+2. `ready=false` 时说明需要初始化；用户要求重建时可直接调用 `build_code_index`。
+3. 调用 `refresh_code_index` 重新扫描项目并更新静态索引。
+4. 报告新增、变更、删除和未变文件数量，以及刷新后的总量。
+5. 索引文件缺失或损坏导致刷新失败时，呈现原始错误并建议重建。
+6. 刷新只影响静态索引，不重启、不安装也不刷新独立注册的 `gopls` MCP。

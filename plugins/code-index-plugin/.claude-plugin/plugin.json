@@ -1,7 +1,7 @@
 {
   "name": "code-index-plugin",
-  "version": "0.1.3",
-  "description": "构建并搜索本地代码索引，在工具可用时以 LSP 作为高置信语义信源。",
+  "version": "0.2.0",
+  "description": "构建本地代码索引，并通过 gopls 原生 MCP 提供高置信 Go 语义能力。",
   "author": {
     "name": "voidmind"
   }

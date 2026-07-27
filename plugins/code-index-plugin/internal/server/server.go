@@ -12,7 +12,7 @@ import (
 func New() (*mcpserver.MCPServer, error) {
 	s := mcpserver.NewMCPServer(
 		"code-index-plugin",
-		"0.1.1",
+		"0.2.0",
 		mcpserver.WithToolCapabilities(false),
 		mcpserver.WithRecovery(),
 	)
