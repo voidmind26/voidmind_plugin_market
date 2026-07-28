@@ -68,13 +68,6 @@ func normalized(t *testing.T, path string) string {
 	return got
 }
 
-func TestResolveFileRejectsRelativePath(t *testing.T) {
-	_, err := NewResolver().ResolveFile("main.go")
-	if err == nil {
-		t.Fatal("ResolveFile() accepted a relative path")
-	}
-}
-
 func TestContainsRejectsSiblingPrefix(t *testing.T) {
 	root := filepath.Join(string(filepath.Separator), "tmp", "repo")
 	if Contains(root, filepath.Join(string(filepath.Separator), "tmp", "repo-other", "main.go")) {

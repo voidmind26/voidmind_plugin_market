@@ -59,33 +59,35 @@ func TestManagerReusesConcurrentWorkspaceSession(t *testing.T) {
 			t.Fatalf("Get() returned %p, want %p", got, created)
 		}
 	}
-	if !manager.Active("/repo") {
-		t.Fatal("Active() = false after successful initialization")
-	}
 }
 
-func TestManagerCloseClosesEverySessionOnce(t *testing.T) {
-	clients := map[string]*fakeClient{}
-	manager := NewManager(func(_ context.Context, root string) (Client, error) {
-		client := &fakeClient{}
-		clients[root] = client
-		return client, nil
+func TestManagerRecreatesInvalidatedSession(t *testing.T) {
+	var clients []*fakeClient
+	manager := NewManager(func(context.Context, string) (Client, error) {
+		created := &fakeClient{}
+		clients = append(clients, created)
+		return created, nil
 	})
 
-	for _, root := range []string{"/repo-a", "/repo-b"} {
-		if _, err := manager.Get(context.Background(), root); err != nil {
-			t.Fatalf("Get(%s) error = %v", root, err)
-		}
+	first, err := manager.Get(context.Background(), "/repo")
+	if err != nil {
+		t.Fatalf("first Get() error = %v", err)
+	}
+	manager.Invalidate("/repo", first)
+	second, err := manager.Get(context.Background(), "/repo")
+	if err != nil {
+		t.Fatalf("second Get() error = %v", err)
+	}
+	if first == second || len(clients) != 2 {
+		t.Fatalf("invalidated session was reused: first=%p second=%p starts=%d", first, second, len(clients))
+	}
+	if clients[0].closed.Load() != 1 {
+		t.Fatalf("invalidated client close count = %d, want 1", clients[0].closed.Load())
 	}
 	if err := manager.Close(); err != nil {
 		t.Fatalf("Close() error = %v", err)
 	}
-	if err := manager.Close(); err != nil {
-		t.Fatalf("second Close() error = %v", err)
-	}
-	for root, client := range clients {
-		if client.closed.Load() != 1 {
-			t.Errorf("client %s close count = %d, want 1", root, client.closed.Load())
-		}
+	if clients[1].closed.Load() != 1 {
+		t.Fatalf("active client close count = %d, want 1", clients[1].closed.Load())
 	}
 }

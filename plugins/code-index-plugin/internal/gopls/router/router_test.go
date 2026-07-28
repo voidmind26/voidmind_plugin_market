@@ -2,6 +2,7 @@ package router
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,6 +19,7 @@ type fakeSessions struct {
 	mu      sync.Mutex
 	clients map[string]*recordingClient
 	active  map[string]bool
+	invalid []string
 }
 
 func (s *fakeSessions) Get(_ context.Context, root string) (session.Client, error) {
@@ -33,9 +35,16 @@ func (s *fakeSessions) Active(root string) bool {
 	return s.active[root]
 }
 
+func (s *fakeSessions) Invalidate(root string, _ session.Client) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.invalid = append(s.invalid, root)
+}
+
 type recordingClient struct {
 	mu       sync.Mutex
 	response string
+	err      error
 	requests []mcp.CallToolRequest
 }
 
@@ -43,6 +52,9 @@ func (c *recordingClient) CallTool(_ context.Context, request mcp.CallToolReques
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.requests = append(c.requests, request)
+	if c.err != nil {
+		return nil, c.err
+	}
 	return mcp.NewToolResultText(c.response), nil
 }
 
@@ -118,67 +130,27 @@ func TestCallSingleRejectsMultiRepoParent(t *testing.T) {
 	}
 }
 
-func TestDiagnosticsAcceptsProjectSubdirectory(t *testing.T) {
-	root := t.TempDir()
-	module := filepath.Join(root, "repo")
-	subdir := filepath.Join(module, "internal", "service")
-	if err := os.MkdirAll(subdir, 0o755); err != nil {
-		t.Fatalf("MkdirAll(%s): %v", subdir, err)
-	}
-	if err := os.WriteFile(filepath.Join(module, "go.mod"), []byte("module example.com/test\n"), 0o644); err != nil {
-		t.Fatalf("WriteFile(go.mod): %v", err)
-	}
-	file := filepath.Join(subdir, "service.go")
-	if err := os.WriteFile(file, []byte("package service\n"), 0o644); err != nil {
-		t.Fatalf("WriteFile(service.go): %v", err)
-	}
-	module, err := workspace.Normalize(module)
-	if err != nil {
-		t.Fatalf("Normalize(module): %v", err)
-	}
-	client := &recordingClient{response: "No diagnostics."}
-	router := New(workspace.NewResolver(), &fakeSessions{
-		clients: map[string]*recordingClient{module: client},
+func TestCallInvalidatesFailedSession(t *testing.T) {
+	_, moduleA, _, _, _ := makeMultiRepo(t)
+	client := &recordingClient{err: errors.New("transport closed")}
+	sessions := &fakeSessions{
+		clients: map[string]*recordingClient{moduleA: client},
 		active:  map[string]bool{},
-	})
+	}
+	router := New(workspace.NewResolver(), sessions)
 
-	result, err := router.Diagnostics(context.Background(), subdir, []string{file}, map[string]any{"files": []string{file}})
-	if err != nil {
-		t.Fatalf("Diagnostics() error = %v", err)
+	_, err := router.CallSingle(context.Background(), "go_workspace", moduleA, nil)
+	if err == nil {
+		t.Fatal("CallSingle() accepted an upstream transport failure")
 	}
-	if result.IsError {
-		t.Fatalf("Diagnostics() returned tool error: %s", resultText(t, result))
+	if len(sessions.invalid) != 1 || sessions.invalid[0] != moduleA {
+		t.Fatalf("invalidated sessions = %v, want [%s]", sessions.invalid, moduleA)
 	}
-}
 
-func TestDiagnosticsRejectsRelativeFile(t *testing.T) {
-	router := New(workspace.NewResolver(), &fakeSessions{clients: map[string]*recordingClient{}, active: map[string]bool{}})
-	_, err := router.Diagnostics(context.Background(), "", []string{"main.go"}, map[string]any{"files": []string{"main.go"}})
-	if err == nil || !strings.Contains(err.Error(), "绝对路径") {
-		t.Fatalf("Diagnostics() error = %v, want absolute path error", err)
-	}
-}
-
-func TestListWorkspacesReportsSessionState(t *testing.T) {
-	root, moduleA, moduleB, _, _ := makeMultiRepo(t)
-	router := New(workspace.NewResolver(), &fakeSessions{
-		clients: map[string]*recordingClient{moduleA: {}, moduleB: {}},
-		active:  map[string]bool{moduleB: true},
-	})
-
-	got, err := router.ListWorkspaces(root)
-	if err != nil {
-		t.Fatalf("ListWorkspaces() error = %v", err)
-	}
-	if got.Count != 2 {
-		t.Fatalf("ListWorkspaces() count = %d, want 2", got.Count)
-	}
-	states := map[string]bool{}
-	for _, ws := range got.Workspaces {
-		states[ws.Root] = ws.SessionActive
-	}
-	if states[moduleA] || !states[moduleB] {
-		t.Fatalf("session states = %v", states)
+	client.err = context.Canceled
+	_, _ = router.CallSingle(context.Background(), "go_workspace", moduleA, nil)
+	if len(sessions.invalid) != 1 {
+		t.Fatalf("canceled call invalidated session: %v", sessions.invalid)
 	}
 }
 

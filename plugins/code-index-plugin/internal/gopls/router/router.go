@@ -27,6 +27,7 @@ type Resolver interface {
 type Sessions interface {
 	Get(context.Context, string) (session.Client, error)
 	Active(string) bool
+	Invalidate(string, session.Client)
 }
 
 type Router struct {
@@ -226,6 +227,9 @@ func (r *Router) callWorkspace(
 	request.Params.Arguments = cloneArguments(arguments)
 	result, err := client.CallTool(ctx, request)
 	if err != nil {
+		if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+			r.sessions.Invalidate(ws.Root, client)
+		}
 		return nil, fmt.Errorf("%s 调用 %s 失败: %w", ws.Root, toolName, err)
 	}
 	return result, nil

@@ -90,6 +90,23 @@ func (m *Manager) Active(root string) bool {
 	}
 }
 
+func (m *Manager) Invalidate(root string, failed Client) {
+	m.mu.Lock()
+	if m.closed {
+		m.mu.Unlock()
+		return
+	}
+	current, ok := m.entries[root]
+	if !ok || current.client != failed {
+		m.mu.Unlock()
+		return
+	}
+	delete(m.entries, root)
+	m.mu.Unlock()
+
+	_ = failed.Close()
+}
+
 func (m *Manager) Close() error {
 	m.mu.Lock()
 	if m.closed {

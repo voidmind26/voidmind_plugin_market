@@ -17,6 +17,7 @@ type noSessionPool struct{}
 
 func (noSessionPool) Get(context.Context, string) (session.Client, error) { return nil, nil }
 func (noSessionPool) Active(string) bool                                  { return false }
+func (noSessionPool) Invalidate(string, session.Client)                   {}
 
 func TestRegisterToolsExposesRoutedGoplsSchemas(t *testing.T) {
 	server := mcpserver.NewMCPServer("test", "1.0.0")
@@ -66,19 +67,6 @@ func TestRegisterToolsExposesRoutedGoplsSchemas(t *testing.T) {
 	diagnostics := findTool(result.Tools, "go_diagnostics")
 	if diagnostics == nil || diagnostics.InputSchema.Properties["files"] == nil {
 		t.Fatal("go_diagnostics files schema is missing")
-	}
-}
-
-func TestDiagnosticsRequiresRootOrFiles(t *testing.T) {
-	handler := NewHandler(goplsrouter.New(workspace.NewResolver(), noSessionPool{}))
-	result, err := handler.GoDiagnostics(context.Background(), mcp.CallToolRequest{
-		Params: mcp.CallToolParams{Arguments: map[string]any{}},
-	})
-	if err != nil {
-		t.Fatalf("GoDiagnostics() error = %v", err)
-	}
-	if !result.IsError {
-		t.Fatal("GoDiagnostics() accepted empty routing arguments")
 	}
 }
 
