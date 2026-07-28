@@ -3,7 +3,6 @@ package codeindexplugin_test
 import (
 	"encoding/json"
 	"os"
-	"strings"
 	"testing"
 )
 
@@ -17,7 +16,7 @@ type mcpServer struct {
 	Args    []string `json:"args"`
 }
 
-func TestMCPManifestRegistersWorkspaceAwareGopls(t *testing.T) {
+func TestMCPManifestRegistersOnlyRoutedCodeIndexServer(t *testing.T) {
 	payload, err := os.ReadFile(".mcp.json")
 	if err != nil {
 		t.Fatalf("read .mcp.json: %v", err)
@@ -28,18 +27,17 @@ func TestMCPManifestRegistersWorkspaceAwareGopls(t *testing.T) {
 		t.Fatalf("decode .mcp.json: %v", err)
 	}
 
-	if manifest.Servers["code-index"].CWD != "." {
+	if len(manifest.Servers) != 1 {
+		t.Fatalf("MCP server count = %d, want 1 routed server", len(manifest.Servers))
+	}
+	codeIndex, ok := manifest.Servers["code-index"]
+	if !ok {
+		t.Fatal("code-index MCP server is not registered")
+	}
+	if codeIndex.CWD != "." {
 		t.Fatal("code-index server must run from the plugin root")
 	}
-
-	gopls, ok := manifest.Servers["gopls"]
-	if !ok {
-		t.Fatal("gopls MCP server is not registered")
-	}
-	if gopls.CWD != "" {
-		t.Fatalf("gopls must inherit the consumer workspace, got cwd %q", gopls.CWD)
-	}
-	if gopls.Command != "bash" || !strings.Contains(strings.Join(gopls.Args, " "), "exec gopls mcp") {
-		t.Fatalf("gopls server must launch gopls mcp, got %+v", gopls)
+	if _, exists := manifest.Servers["gopls"]; exists {
+		t.Fatal("standalone gopls server must be removed in favor of the multi-workspace router")
 	}
 }

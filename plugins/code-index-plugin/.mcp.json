@@ -7,13 +7,6 @@
         "-lc",
         "BIN=\"./bin/code-index-mcp\"; if [ ! -x \"$BIN\" ] || [ ./build.sh -nt \"$BIN\" ] || [ ./go.mod -nt \"$BIN\" ] || [ ./go.sum -nt \"$BIN\" ] || find ./cmd ./internal ./skills -type f -newer \"$BIN\" -print -quit | grep -q .; then bash ./build.sh; fi; exec \"$BIN\""
       ]
-    },
-    "gopls": {
-      "command": "bash",
-      "args": [
-        "-lc",
-        "if ! command -v gopls >/dev/null 2>&1; then echo 'code-index-plugin: gopls 未安装，请执行 go install golang.org/x/tools/gopls@latest' >&2; exit 127; fi; if ! gopls help mcp >/dev/null 2>&1; then echo 'code-index-plugin: 当前 gopls 不支持 mcp 子命令，请升级到 v0.22.0 或更高版本' >&2; exit 2; fi; exec gopls mcp"
-      ]
     }
   }
 }

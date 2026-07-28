@@ -12,4 +12,4 @@ allowed-tools:
 4. 报告索引目录以及文件、符号和代码块数量。
 5. 构建完成后确认项目 `.gitignore` 包含 `.claude/code-index`；没有 `.gitignore` 时创建，条目已存在时跳过。
 6. 构建失败时直接呈现工具错误，不猜测结果。
-7. `gopls` MCP 与静态索引独立运行；初始化索引不启动、不安装也不刷新 `gopls`。
+7. `gopls` 子会话由查询工具按 workspace 懒启动；初始化索引不启动、不安装也不刷新 `gopls`。

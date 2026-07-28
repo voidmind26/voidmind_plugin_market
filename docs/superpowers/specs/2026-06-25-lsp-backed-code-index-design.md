@@ -1,147 +1,139 @@
-# 基于 gopls 原生 MCP 的代码索引增强设计
+# 基于 gopls 原生 MCP 的多仓代码索引增强设计
 
 ## 背景
 
-`code-index-plugin` 已提供文件、Go 符号和代码块的本地静态索引。静态索引适合快速发现候选，但无法可靠裁决符号定义、引用、类型、包 API、跨文件依赖和编译诊断。
+`code-index-plugin` 已提供文件、Go 符号和代码块的本地静态索引，并曾在 `.mcp.json` 中独立注册 `gopls mcp`。健康 `gopls` 的符号、引用、类型、包 API、跨文件依赖和诊断比文本匹配可靠，因此应作为 Go 语义的首要信源。
 
-Codex 插件规范允许声明 MCP server，但没有通用 `lspServers` 插件组件。任意语言服务器不能直接写入 `.mcp.json`，因为 LSP 和 MCP 虽然都使用 JSON-RPC 思想，初始化流程、消息协议和工具模型并不相同。
+独立注册只适用于任务工作目录本身是一个有效 Go workspace 的情况。当用户绑定一个包含多个独立仓库的父目录时，父目录通常没有 `go.work`，单个 `gopls` 进程不会递归把所有子目录的 `go.mod` 聚合为 workspace。此时它可能看到多个模块文件，却没有活动模块和包。
 
-`gopls v0.22.0` 已提供原生 `gopls mcp` 子命令，能够通过 stdio 直接作为 MCP server 运行。因此 Go 语言第一版不再自行维护 LSP 到 MCP 的协议桥接，而是在代码索引插件中注册 `gopls` 的原生 MCP 服务。
+Codex 插件清单没有通用 `lspServers` 组件。能够声明的是实现 MCP 的 `gopls mcp`，而不是普通的 `gopls serve`。本次改造继续复用上游原生 MCP 语义，只在插件内部增加 MCP 到 MCP 的 workspace 路由。
 
 ## 目标
 
-- 在 `code-index-plugin` 中直接注册 `gopls mcp`。
-- 扩大 `gopls` 对 Go 代码查询、影响分析、修改和诊断的默认覆盖范围。
-- 将健康 `gopls` 的成功结果视为高置信语义信源。
-- 保留静态索引发现候选、非 Go 搜索和服务不可用时的回退能力。
-- 保证 `gopls` 分析使用方工作区，而不是插件安装目录。
-- 不自动安装或升级用户机器上的语言服务器。
+- 单仓、`go.work` 和多仓父目录使用同一组 `go_*` 工具。
+- 按 `go.work` 或 `go.mod` 根目录隔离 `gopls mcp` 子会话。
+- 工作区型工具显式接收 `project_root`，文件型工具从绝对路径确定 workspace。
+- 父目录符号搜索和诊断受控分发到子 workspace，并合并结果。
+- 子会话按根目录懒启动、并发复用，在 MCP 退出时统一关闭。
+- 保持健康 `gopls` 的成功结果为高置信语义信源，同时保留静态索引和源码回退。
 
 ## 非目标
 
+- 不重新实现 LSP framing、初始化、文档同步或语义查询。
 - 不新增通用 LSP 插件清单字段。
-- 不在自带 Go MCP 服务中实现 LSP Content-Length framing、会话路由或文档同步。
-- 不连接 IDE 私有语言服务会话。
-- 第一版不注册 TypeScript、Python、Java 等其他语言服务器。
-- 不使用 hook 启动语言服务器、扫描项目或修改文件。
+- 不自动生成或修改用户项目的 `go.work`。
+- 不自动安装或升级 `gopls`。
+- 不默认对多仓父目录执行全量漏洞检查。
+- 不注册 TypeScript、Python、Java 等其他语言服务器。
 
-## 方案决策
+## 架构
 
-### 采用方案：两个独立 MCP 服务
-
-插件 `.mcp.json` 同时注册：
+插件只在 `.mcp.json` 注册一个 `code-index` stdio MCP：
 
 ```text
-code-index-plugin
-├── code-index MCP
-│   ├── build_code_index
-│   ├── refresh_code_index
-│   ├── search_code_index
-│   └── get_code_index_status
-└── gopls MCP
-    ├── go_workspace
-    ├── go_search
-    ├── go_file_context
-    ├── go_package_api
-    ├── go_symbol_references
-    ├── go_diagnostics
-    ├── go_vulncheck
-    └── go_rename_symbol
+Codex
+  |
+  v
+code-index MCP
+  |-- 静态索引工具
+  |-- list_go_workspaces
+  `-- go_* 路由工具
+        |
+        |-- workspace A -> gopls mcp
+        |-- workspace B -> gopls mcp
+        `-- workspace C -> gopls mcp
 ```
 
-`code-index` 使用插件目录下的自带二进制，因此设置 `"cwd": "."`。`gopls` 必须继承当前使用方工作区，所以配置中不设置 `cwd`。
+路由层由四个职责组成：
 
-### 未采用方案：在 code-index MCP 内嵌 LSP 客户端
+- `workspace`：规范化路径，发现 `go.work` 或 `go.mod` 根目录。
+- `session`：按 workspace root 懒启动、复用并关闭 `gopls mcp` 客户端。
+- `router`：选择单仓或多仓调用方式，限制并发并聚合结果。
+- `tools/gopls`：向 Codex 暴露稳定的 MCP 工具 schema。
 
-内嵌方案需要自行维护：
+## Workspace 解析
 
-- LSP stdio 消息 framing 和 JSON-RPC 请求路由。
-- `initialize`、文档打开与变更通知。
-- 项目级 `gopls` 会话、并发、取消和退出清理。
-- Location、LocationLink、DocumentSymbol、Hover 和诊断的协议兼容。
-- MCP 工具 schema 与 LSP 结果归一化。
+### 文件路径
 
-这些能力已由 `gopls mcp` 提供。重复实现会增加协议偏差、进程泄漏和版本兼容风险，且无法获得比上游更可靠的语义结果。
+文件型工具要求绝对路径。解析时向上查找：
 
-### 未采用方案：把 gopls 当作普通 LSP 写进 JSON
+1. 存在任意包含该文件的最近 `go.work` 时，使用该 `go.work` 根。
+2. 否则使用最近的 `go.mod` 根。
+3. 两者均不存在时返回可回退错误。
 
-当前 Codex 插件清单没有 `lspServers` 或同类字段，未知字段会被插件校验拒绝。`.mcp.json` 也只能配置真正实现 MCP 的服务，不能直接启动 `gopls serve`。本设计能够直接声明，是因为使用的是 `gopls mcp`，不是 `gopls serve`。
+`go.work` 优先保证成员模块共享一个上游会话；没有 `go.work` 时，嵌套模块使用最近的 `go.mod`。
 
-## 启动与降级
+### 项目目录
 
-`gopls` server 通过登录 shell 启动，以便读取用户安装 Go 工具时使用的 `PATH`：
+如果 `project_root` 位于已有 workspace 内，直接使用包含它的 workspace。否则递归发现子目录中的 `go.work` 和 `go.mod`。发现一个 workspace 后不再扫描其内部模块，避免为同一构建范围重复启动会话。
+
+扫描跳过版本控制目录、IDE 配置、`node_modules` 和 `vendor`，不跟随目录符号链接。所有会话键使用真实绝对路径，避免同一目录因符号链接产生重复进程。
+
+## 工具路由
+
+| 工具 | 路由依据 | 多仓父目录行为 |
+|------|----------|----------------|
+| `list_go_workspaces` | `project_root` | 仅发现并报告会话状态 |
+| `go_workspace` | `project_root` | 分发并按 workspace 汇总 |
+| `go_search` | `project_root` | 限并发分发，合并并去重符号行 |
+| `go_file_context` | `file` | 自动选择文件所属 workspace |
+| `go_package_api` | `project_root` | 要求明确单个 workspace |
+| `go_symbol_references` | `file` | 自动选择文件所属 workspace |
+| `go_diagnostics` | `files` 或 `project_root` | 文件按 workspace 分组；无文件时分发 |
+| `go_vulncheck` | `project_root` | 要求明确单个 workspace |
+| `go_rename_symbol` | `file` | 自动选择文件所属 workspace |
+
+工作区型路由参数不会转发给上游，原生 gopls 参数名和语义保持不变。单仓调用直接返回上游结果；多仓调用按根目录稳定排序。部分子仓失败时保留成功结果并列出缺失范围，全部失败时才返回工具错误。
+
+## 会话管理
+
+第一次查询某个 workspace 时，通过登录 shell 在该根目录执行：
 
 ```bash
-gopls help mcp
+unset GOWORK
+cd -- "$workspace_root"
 exec gopls mcp
 ```
 
-启动前检查：
+路由会清除继承的 `GOWORK` 覆盖，让 gopls 按已选择的 workspace 根自动识别 `go.work` 或 `go.mod`。根目录通过独立位置参数传入，不拼接到 shell 代码。客户端完成 MCP `initialize` 后才进入可复用状态；同一根目录的并发首次请求只会创建一个子进程。初始化失败的条目会被移除，后续调用允许重试。
 
-1. `PATH` 中存在 `gopls`。
-2. 当前版本支持 `mcp` 子命令。
+服务持续消费子进程 stderr，避免管道写满阻塞；stderr 不作为语义证据。`code-index` MCP 收到 EOF、SIGINT 或 SIGTERM 退出时，统一关闭所有已创建的 gopls 客户端。
 
-缺少依赖或版本过低时，`gopls` MCP 启动失败并输出简短、可行动的 stderr。它与 `code-index` 是两个独立服务，因此静态索引能力不受影响。查询 skill 发现 `go_*` 工具不存在或 `go_workspace` 失败后，回退到静态索引和源码。
+## 信源与回退
 
-## 信源模型
-
-- `gopls`：Go 符号、引用、包 API、文件内外依赖和诊断的首要信源。
-- 静态索引：候选文件、模块、标识符、非 Go 内容和快速缩小范围的发现信源。
+- `gopls`：Go 符号、引用、包 API、文件依赖和诊断的首要信源。
+- 静态索引：候选文件、模块、标识符和非 Go 内容的发现信源。
 - 源码读取：业务规则、控制流、动态行为和运行语义的解释信源。
-- 文本搜索：动态注册、字符串引用，以及 `gopls` 或索引不可用时的回退信源。
-- 测试与构建：代码修改是否符合业务和运行要求的最终验证，不被语言服务替代。
+- 文本搜索：动态注册、字符串引用和服务不可用时的回退信源。
+- 测试与构建：代码变更正确性的最终验证。
 
-不要求每个 `gopls` 成功结果都被文本搜索重复证明。语义结果与磁盘源码明显冲突时，先检查工作区、文件版本、符号选择和语言服务状态。
+工具缺失、`gopls` 版本不支持 MCP、目标没有 Go workspace 或子会话失败时，查询 skill 回退到静态索引与源码。多仓部分失败只降低对应 workspace 的结论覆盖范围。
 
-## 查询工作流
+## 安全边界
 
-1. Go 任务且工具可用时，尽早调用 `go_workspace` 确认工作区。
-2. 用户没有提供可靠文件或符号时，先用静态索引发现候选。
-3. 用 `go_search` 确认符号位置，用 `go_symbol_references` 评估引用和影响。
-4. 首次读取 Go 文件后，使用 `go_file_context` 获取同包依赖上下文。
-5. 需要公开类型、签名或方法集合时，使用 `go_package_api`。
-6. 需要错误、类型和静态分析结果时，使用 `go_diagnostics`。
-7. 动态注册和字符串引用使用文本搜索补充，业务含义读取最小源码解释。
-
-## 代码修改工作流
-
-扩大 `gopls` 影响范围不只覆盖查询，也覆盖 Go 代码变更：
-
-1. 修改包级符号前使用 `go_symbol_references` 检查影响范围。
-2. 每批 Go 文件修改后，对活动文件调用 `go_diagnostics`。
-3. 先解决 error 级诊断，再运行受影响包测试。
-4. 新增或升级依赖后使用 `go_vulncheck`。
-5. 只有用户明确要求重命名时才使用 `go_rename_symbol`，并审阅生成编辑后再应用。
-
-## 安全与可移植性
-
-- 不在仓库中写死本机 `gopls` 绝对路径。
-- 不自动执行 `go install`。
-- 不为 `gopls` 配置插件目录 `cwd`。
-- `go_rename_symbol` 不作为普通查询工具使用。
-- `gopls` stderr 只用于启动诊断，不作为语义证据。
-- 静态索引和 `gopls` 均只面向当前使用方工作区。
+- 不自动执行 `go install` 或修改用户 Go 配置。
+- 所有文件型调用要求绝对路径。
+- 带 `project_root` 的诊断文件必须解析到其目录范围内的 workspace。
+- `go_vulncheck.dir` 必须位于选定 workspace 内。
+- `go_package_api` 和 `go_vulncheck` 不接受含多个独立 workspace 的父目录。
+- `go_rename_symbol` 只返回编辑，不自动应用。
 
 ## 测试策略
 
 自动测试覆盖：
 
-- `.mcp.json` 同时注册 `code-index` 和 `gopls`。
-- `code-index` 固定在插件根目录启动。
-- `gopls` 不设置 `cwd`，并执行 `gopls mcp`。
-- 现有 4 个静态索引工具与全部 Go 测试继续通过。
-- 查询 skill 只引用 `gopls` 实际公开的 `go_*` 工具。
+- `go.work` 优先级、最近 `go.mod`、多仓发现和路径边界。
+- 同一 workspace 的并发会话复用和退出关闭。
+- 假上游 MCP 的请求代理、路由参数剥离、搜索合并去重。
+- 跨仓诊断文件分组和单仓工具的歧义拒绝。
+- `tools/list` 包含 4 个静态工具和 9 个 Go 路由工具。
+- `.mcp.json` 只注册路由后的 `code-index` 服务。
 
-真实 smoke test 覆盖：
-
-- `gopls version` 和 `gopls help mcp` 成功。
-- MCP `initialize` 与 `tools/list` 成功。
-- 工具列表包含 8 个预期 `go_*` 工具。
-- 在 Go 模块目录调用 `go_workspace` 能识别当前模块。
+真实 smoke test 使用可选父目录发现 workspace，再选择一个具体根启动真实 `gopls mcp`，验证 MCP 初始化、工具清单和 `go_workspace` 路由。多仓测试可通过环境变量声明预期 workspace 数量。
 
 ## 发布要求
 
-- 同步 `.codex-plugin/plugin.json`、`.claude-plugin/plugin.json` 和市场版本。
-- 同步插件 README、根 README、`AGENTS.md` 与 `CLAUDE.md`。
-- 运行 skill 和 plugin 校验。
-- 通过 cachebuster 生成新的 Codex 插件版本后提交发布。
+- 同步两个插件清单、插件 README、根 README、`AGENTS.md` 与 `CLAUDE.md`。
+- 运行 Go 单测、构建、skill 校验和 plugin 校验。
+- 使用插件 cachebuster 脚本更新 Codex 版本并重新安装本地插件。
+- 在新的 Codex 任务中验证更新后的 MCP 工具清单。

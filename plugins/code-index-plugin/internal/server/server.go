@@ -1,16 +1,25 @@
 package server
 
 import (
+	goplsrouter "code-index-plugin/internal/gopls/router"
+	"code-index-plugin/internal/gopls/session"
+	"code-index-plugin/internal/gopls/workspace"
 	"code-index-plugin/internal/index/scanner"
 	indexservice "code-index-plugin/internal/index/service"
 	"code-index-plugin/internal/index/storage"
+	goplstool "code-index-plugin/internal/tools/gopls"
 	indextool "code-index-plugin/internal/tools/index"
 
 	mcpserver "github.com/mark3labs/mcp-go/server"
 )
 
-func New() (*mcpserver.MCPServer, error) {
-	s := mcpserver.NewMCPServer(
+type Server struct {
+	MCP      *mcpserver.MCPServer
+	sessions *session.Manager
+}
+
+func New() (*Server, error) {
+	mcpServer := mcpserver.NewMCPServer(
 		"code-index-plugin",
 		"0.2.0",
 		mcpserver.WithToolCapabilities(false),
@@ -18,8 +27,17 @@ func New() (*mcpserver.MCPServer, error) {
 	)
 
 	svc := indexservice.New(storage.New(), scanner.New(indexservice.DefaultOptions()))
-	handler := indextool.NewHandler(svc)
-	handler.RegisterTools(s)
+	indexHandler := indextool.NewHandler(svc)
+	indexHandler.RegisterTools(mcpServer)
 
-	return s, nil
+	sessions := session.NewManager(session.NewGoplsClient)
+	router := goplsrouter.New(workspace.NewResolver(), sessions)
+	goplsHandler := goplstool.NewHandler(router)
+	goplsHandler.RegisterTools(mcpServer)
+
+	return &Server{MCP: mcpServer, sessions: sessions}, nil
+}
+
+func (s *Server) Close() error {
+	return s.sessions.Close()
 }

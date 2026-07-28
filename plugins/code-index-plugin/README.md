@@ -1,22 +1,37 @@
 # code-index-plugin
 
-为当前项目构建本地静态代码索引，并通过 `gopls` 原生 MCP 提供 Go 语义搜索、引用、包 API、文件上下文和诊断能力。
+为当前项目构建本地静态代码索引，并通过多 workspace `gopls mcp` 路由提供 Go 语义搜索、引用、包 API、文件上下文和诊断能力。
 
 ## 架构
 
-插件在 `.mcp.json` 中注册两个独立的 stdio MCP 服务：
+插件在 `.mcp.json` 中只注册一个 `code-index` stdio MCP 服务。该服务同时提供：
 
-- `code-index`：插件自带的 Go 服务，负责索引构建、刷新、搜索和状态查询。
-- `gopls`：执行 `gopls mcp`，直接使用语言服务器提供的 MCP 工具。
+- 4 个静态索引工具，负责索引构建、刷新、搜索和状态查询。
+- 1 个 Go workspace 发现工具。
+- 8 个与原生 `gopls mcp` 同名的 `go_*` 语义工具。
 
-Codex 插件清单没有通用 `lspServers` 组件，因此不能把任意 LSP 进程当作 LSP 直接声明在 JSON 中。`gopls v0.22.0` 已原生实现 MCP stdio 服务，所以可以作为普通 MCP server 注册，不需要在 `code-index` 服务中重复实现 LSP JSON-RPC 桥接。
+`code-index` 固定从插件根目录启动，因此所有工作区型 Go 工具都显式接收 `project_root`。服务根据路径发现 `go.work` 或 `go.mod`，为每个 workspace 懒启动并复用独立的 `gopls mcp` 子会话。
 
-两个服务的工作目录有意不同：
+```text
+Codex -> code-index MCP -> workspace router -> gopls mcp per workspace
+                         `-> static code index
+```
 
-- `code-index` 设置 `"cwd": "."`，从插件安装目录构建并启动自带二进制。
-- `gopls` 不设置 `cwd`，继承使用方工作区，确保分析的是当前项目而不是插件源码。
+Codex 插件清单没有通用 `lspServers` 组件，不能把任意 LSP 进程直接声明在 JSON 中。这里复用的是 `gopls v0.22.0+` 原生 MCP 服务；路由层只负责 workspace 选择和结果聚合，不重复实现 LSP。
 
-任何修改都不得为 `gopls` 增加固定插件目录 `cwd`。
+## 多仓行为
+
+当绑定目录本身是 Go module 或 `go.work` 时，路由使用该 workspace。当绑定目录是没有 `go.work` 的多仓父目录时，路由递归发现各子目录的 `go.mod`：
+
+- `go_workspace`、`go_search` 和无文件参数的 `go_diagnostics` 可分发到多个子仓。
+- `go_search` 合并并去重结果，分发并发上限为 4。
+- `go_diagnostics(files)` 按文件所属 workspace 自动分组。
+- `go_package_api` 和 `go_vulncheck` 要求 `project_root` 指向具体单仓，避免包名歧义和意外全量扫描。
+- `go_file_context`、`go_symbol_references` 和 `go_rename_symbol` 从绝对文件路径选择 workspace。
+
+路由优先使用包含目标路径的 `go.work`；不存在 `go.work` 时使用最近的 `go.mod`。一个子仓启动失败不会丢弃其他子仓的成功结果。
+
+启动子会话时会清除继承的 `GOWORK` 覆盖，确保 gopls 按路由选定的根自动识别对应 `go.work` 或 `go.mod`。
 
 ## 前置依赖
 
@@ -28,7 +43,7 @@ gopls version
 gopls help mcp
 ```
 
-当前已验证版本为 `gopls v0.22.0`。插件不会自动安装或升级语言服务器；`gopls` 缺失或版本过低时，仅该 MCP 服务启动失败，静态索引仍可使用。
+当前已验证版本为 `gopls v0.22.0`。插件不会自动安装或升级语言服务器；`gopls` 缺失或版本过低时，Go 路由工具返回可行动错误，静态索引仍可使用。
 
 ## 目录结构
 
@@ -40,21 +55,16 @@ code-index-plugin/
 ├── README.md
 ├── build.sh
 ├── cmd/code-index-mcp/main.go
-├── go.mod
-├── go.sum
-├── plugin_config_test.go
 ├── internal/
+│   ├── gopls/
+│   │   ├── router/
+│   │   ├── session/
+│   │   └── workspace/
 │   ├── index/
-│   │   ├── config/
-│   │   ├── extractor/
-│   │   ├── manifest/
-│   │   ├── model/
-│   │   ├── query/
-│   │   ├── scanner/
-│   │   ├── service/
-│   │   └── storage/
 │   ├── server/
-│   └── tools/index/
+│   └── tools/
+│       ├── gopls/
+│       └── index/
 └── skills/
     ├── code-index-init/
     ├── code-index-refresh/
@@ -63,66 +73,50 @@ code-index-plugin/
 
 ## 静态索引工具
 
-`code-index` 服务提供 4 个工具。
-
 ### `build_code_index`
 
-构建当前项目的本地索引。
-
-输入：
-
-- `project_root`（可选）
-- `deep_index_paths`（可选）
-
-输出包含索引目录以及文件、符号和代码块数量。
+使用 `project_root` 和可选的 `deep_index_paths` 构建本地索引，返回索引目录以及文件、符号和代码块数量。
 
 ### `refresh_code_index`
 
-增量刷新已存在的索引，返回新增、变更、删除、未变文件数量及刷新后的统计。
+增量刷新已有索引，返回新增、变更、删除、未变文件数量和刷新后统计。
 
 ### `search_code_index`
 
-搜索当前项目索引。
-
-输入：
-
-- `query`
-- `project_root`（可选）
-- `path_prefix`（可选）
-- `prefer_deep_hits`（可选）
-- `limit`（可选，1 到 100）
-
-结果包含命中类型、路径、展示行范围、摘要、评分和评分原因。
+按 `query` 搜索索引，可使用 `project_root`、`path_prefix`、`prefer_deep_hits` 和 1 到 100 的 `limit` 缩小结果。
 
 ### `get_code_index_status`
 
-查询索引是否就绪及当前统计。索引尚未建立时返回 `ready=false`，不直接报错。
+查询索引是否就绪及当前统计；索引尚未建立时返回 `ready=false`。
 
-## gopls 语义工具
+## Go workspace 与语义工具
 
-`gopls` 服务原生提供 8 个 MCP 工具，具体 schema 由当前安装的 `gopls` 版本负责：
+### `list_go_workspaces`
 
-- `go_workspace`：识别 Go 模块、工作区和根目录。
-- `go_search`：模糊搜索工作区 Go 符号。
-- `go_file_context`：总结一个 Go 文件依赖的同包声明。
-- `go_package_api`：查看一个或多个 Go 包的公开 API。
-- `go_symbol_references`：查找包级符号、字段或方法的引用。
-- `go_diagnostics`：获取工作区解析、构建和分析诊断。
-- `go_vulncheck`：检查 Go 工作区依赖漏洞。
-- `go_rename_symbol`：生成工作区符号重命名编辑。
+输入 `project_root`，返回发现的 workspace 根、标记类型、标记文件和当前子会话是否已经启动。该工具只发现目录，不启动 `gopls`。
 
-读取类语义结果是定义、引用、类型、包 API、文件依赖和诊断的高置信信源。`go_rename_symbol` 只在用户明确要求重命名时使用，生成的编辑仍需审阅、应用和测试。
+### 路由后的原生工具
+
+- `go_workspace(project_root)`：汇总一个或多个 Go workspace。
+- `go_search(project_root, query)`：模糊搜索一个或多个 workspace 的 Go 符号。
+- `go_file_context(file)`：总结 Go 文件依赖的同包声明。
+- `go_package_api(project_root, packagePaths)`：查看单个 workspace 中包的公开 API。
+- `go_symbol_references(file, symbol)`：查找包级符号、字段或方法的引用。
+- `go_diagnostics(project_root?, files?)`：获取解析、构建和静态分析诊断。
+- `go_vulncheck(project_root, dir?, pattern?)`：检查单个 workspace 的依赖漏洞。
+- `go_rename_symbol(file, symbol, new_name)`：生成 workspace 符号重命名编辑。
+
+读取类结果是 Go 定义、引用、类型、包 API、文件依赖和诊断的高置信信源。`go_rename_symbol` 不自动应用编辑，仍需审阅和测试。
 
 ## 查询策略
 
 `code-index-search` skill 按以下职责组合工具：
 
-1. 静态索引快速发现候选文件、模块、标识符和非 Go 内容。
-2. `gopls` 确认 Go 符号、引用、包 API、文件依赖和诊断。
-3. 源码读取解释业务规则、控制流、动态注册和运行语义。
-4. `gopls` 不可用或目标不是 Go 时，回退到静态索引、文本搜索和源码。
-
-健康 `gopls` 的成功结果无需再用文本搜索机械复核。结果与磁盘源码明显冲突时，应先检查工作区、文件版本和符号选择，再决定是否降级。
+1. 先用 `list_go_workspaces` 明确单仓、`go.work` 或多仓父目录。
+2. 静态索引快速发现候选文件、模块、标识符和非 Go 内容。
+3. 路由后的 `gopls` 确认 Go 符号、引用、包 API、文件依赖和诊断。
+4. 源码读取解释业务规则、控制流、动态注册和运行语义。
+5. `gopls` 不可用或目标不是 Go 时，回退到静态索引、文本搜索和源码。
 
 ## 索引存储
 
@@ -136,11 +130,9 @@ code-index-plugin/
 └── chunks.jsonl
 ```
 
-`gopls` 不读取或修改该索引目录，静态索引的构建与刷新也不会重启语言服务器。
+`gopls` 子会话不读取或修改该目录，静态索引构建与刷新也不会重启语言服务器。
 
 ## 本地验证
-
-在插件目录执行：
 
 ```bash
 GOWORK=off go test ./...
@@ -149,26 +141,34 @@ gopls version
 gopls help mcp
 ```
 
-真实 MCP smoke test 应至少验证：
+真实单仓 smoke test：
 
-- `code-index` 的 `tools/list` 仍包含 4 个静态工具。
-- `gopls` 的 `tools/list` 包含上述 8 个 `go_*` 工具。
-- 在 Go 模块目录启动 `gopls mcp` 后，`go_workspace` 能识别当前模块。
+```bash
+CODE_INDEX_GOPLS_SMOKE=1 GOWORK=off go test -run TestGoplsRouterSmoke -v .
+```
+
+增加 `CODE_INDEX_GOPLS_SMOKE_BINARY=1` 可让 smoke test 使用 `build.sh` 生成的 `bin/code-index-mcp`，验证发布二进制而不是 `go run`。
+
+真实多仓父目录 smoke test：
+
+```bash
+CODE_INDEX_GOPLS_SMOKE=1 \
+CODE_INDEX_GOPLS_SMOKE_ROOT=/path/to/multi-repo-parent \
+CODE_INDEX_GOPLS_SMOKE_WORKSPACES=9 \
+CODE_INDEX_GOPLS_SMOKE_FANOUT=1 \
+GOWORK=off go test -run TestGoplsRouterSmoke -v .
+```
+
+真实 `go.work` 路由 smoke test：
+
+```bash
+CODE_INDEX_GOPLS_SMOKE=1 \
+CODE_INDEX_GOPLS_SMOKE_GOWORK=1 \
+GOWORK=off go test -run TestGoplsRouterSmoke -v .
+```
 
 ## 当前边界
 
-当前支持：
+当前支持文件级索引、Go 结构化符号索引、启发式代码块索引、索引构建/刷新/搜索，以及单仓和多仓的 `gopls mcp` 语义路由。
 
-- 文件级索引
-- Go 结构化符号索引
-- 启发式代码块索引
-- 索引构建、刷新、搜索和状态查询
-- `gopls` 原生 MCP 语义与诊断工具
-- 查询 skill 的 gopls 语义优先、静态发现与可靠回退策略
-
-当前不做：
-
-- 自动安装或升级 `gopls`
-- 自建通用 LSP 协议桥接
-- TypeScript、Python 等其他语言服务器注册
-- 向量检索、远程索引服务或跨仓库联合索引
+当前不自动安装或升级 `gopls`，不生成 `go.work`，不实现通用 LSP 桥接，不注册其他语言服务器，也不提供向量检索或远程索引服务。

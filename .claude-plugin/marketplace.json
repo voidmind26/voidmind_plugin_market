@@ -37,7 +37,7 @@
     },
     {
       "name": "code-index-plugin",
-      "description": "构建本地代码索引，并通过 gopls 原生 MCP 提供高置信 Go 语义能力。",
+      "description": "构建本地代码索引，并通过多 workspace gopls MCP 路由提供高置信 Go 语义能力。",
       "version": "0.2.0",
       "author": {
         "name": "voidmind"
