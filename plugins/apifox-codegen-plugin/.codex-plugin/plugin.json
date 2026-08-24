@@ -1,7 +1,7 @@
 {
   "name": "apifox-codegen-plugin",
-  "version": "0.1.1",
-  "description": "从 Go Web 代码生成 Apifox 接口文档与场景化测试用例的统一插件",
+  "version": "0.1.1+codex.20260824090823",
+  "description": "通过官方 Apifox CLI 从 Go Web 代码生成接口文档与场景化测试用例",
   "author": {
     "name": "voidmind",
     "email": "voidmind@zuoyebang.cc"
@@ -13,19 +13,19 @@
     "testing"
   ],
   "skills": "./skills/",
-  "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Apifox Codegen",
     "shortDescription": "从 Go Web 代码生成 Apifox 接口与测试。",
-    "longDescription": "扫描 Go Web 项目的路由、控制器与服务逻辑，生成 Apifox 接口文档，并补充场景化测试用例。",
+    "longDescription": "扫描 Go Web 项目的路由、控制器与服务逻辑，通过官方 Apifox CLI 生成接口文档并补充场景化测试用例。",
     "developerName": "voidmind",
     "category": "Developer Tools",
     "capabilities": [
       "Skills",
-      "MCP",
+      "CLI",
       "Write"
     ],
     "defaultPrompt": [
+      "安装并验证 Apifox CLI",
       "从当前 Go 项目生成 Apifox 接口文档",
       "为这些接口补充 Apifox 场景化测试",
       "扫描路由并同步 Apifox 接口"

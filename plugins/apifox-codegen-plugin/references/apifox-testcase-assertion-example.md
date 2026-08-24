@@ -4,7 +4,7 @@
 
 ## 1. 测试用例 path 不要留空
 
-当测试用例界面需要清楚展示请求路径时，测试用例应显式写入接口真实 `apiPath`。
+当测试用例界面需要清楚展示请求路径时，测试用例应显式写入接口真实 `apifoxPath`。
 
 示例：
 
@@ -24,6 +24,7 @@ Apifox UI 可正常识别的后置断言，应使用 `type: assertion`，而不�
 
 ```json
 {
+  "id": "postProcessors.0.assertion",
   "type": "assertion",
   "data": {
     "name": "无报错",
@@ -89,8 +90,8 @@ Apifox UI 可正常识别的后置断言，应使用 `type: assertion`，而不�
 ### 坑 1：`type: assert` 会在 UI 中显示为空白项
 
 现象：
-- MCP 更新成功
-- `getTestCase` 可读回对象
+- CLI 的 create/update 返回成功
+- `apifox test-case get` 可读回对象
 - 但 Apifox UI 的后置操作面板显示为空白
 
 原因：
@@ -98,6 +99,8 @@ Apifox UI 可正常识别的后置断言，应使用 `type: assertion`，而不�
 
 修正：
 - 统一改用 `type: assertion`
+- 写入前使用 `apifox cli-schema validate test-case-create|test-case-update --file <path>` 校验
+- 创建或更新后用 `apifox test-case get` 回读
 
 ### 坑 2：测试用例 path 留空会误判为 URL 缺少 API 部分
 
@@ -107,3 +110,14 @@ Apifox UI 可正常识别的后置断言，应使用 `type: assertion`，而不�
 
 修正：
 - 为测试用例显式写入 `path: "/images/get_image_list"`
+
+### 坑 3：CLI 校验通过不等于运行正确
+
+现象：
+- schema validate 成功
+- test-case get 能回读断言
+- 实际运行仍因环境地址、请求数据或断言路径失败
+
+修正：
+- 创建或更新后至少执行一次 `apifox test-case run`
+- 显式指定测试环境，并检查临时 JSON 报告中的步骤结果

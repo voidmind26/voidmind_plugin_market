@@ -1,0 +1,4 @@
+interface:
+  display_name: "Apifox CLI Setup"
+  short_description: "安装、登录、检查并配置官方 Apifox CLI 运行环境。"
+  default_prompt: "安装或检查 Apifox CLI，并完成登录状态与项目配置验证。"

@@ -92,19 +92,20 @@ dto 是 schema 的主要依据。若 dto 缺失，再回到 controller 返回结
 每个接口至少提取以下信息：
 
 - `method`
-- `apiPath`
+- `fullRoute`
+- `routeMountPath`
+- `apifoxPath`
 - 接口名
 - 请求结构
 - 响应结构
 - 接口说明草案
 
-同时允许保留证据字段，便于回溯：
+同时保留以下证据字段，便于回溯：
 
-- `fullRoute`
 - handler 名
 - controller / service / dto 来源路径
 
-注意：`fullRoute` 只用于扫描和取证；写入 Apifox 时，`path` 只保留 `apiPath`。
+注意：`fullRoute` 只用于扫描和取证；`routeMountPath` 是移除部署前缀后的业务路由；写入 Apifox 时，`path` 必须等于 `apifoxPath`，默认与 `routeMountPath` 相同。
 
 ## 5. 保守降级规则
 
@@ -134,7 +135,7 @@ dto 是 schema 的主要依据。若 dto 缺失，再回到 controller 返回结
 
 遇到信息不足时，按以下顺序降级：
 
-1. 先保留最小确定事实：method、apiPath、handler、已知 DTO 字段。
+1. 先保留最小确定事实：method、fullRoute、routeMountPath、apifoxPath、handler、已知 DTO 字段。
 2. 说明哪些描述来自代码推断，而不是注释原文。
 3. 无法确定的字段留空、标记待确认，或仅保留顶层结构。
 4. 不为“看起来完整”而补写未经证实的信息。

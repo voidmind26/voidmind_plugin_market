@@ -1,62 +1,69 @@
 # 场景化测试生成规则
 
-## 1. 组织原则
+## 1. 资源边界
 
-- 按业务链路组织，不按字段清单组织。
-- 先看接口在 controller 中如何接参与返回，再看 service 中如何承接主流程、异常分支与失败兜底。
-- 先提炼“这个接口在业务上要完成什么”，再整理对应测试场景。
+- 单接口业务验证写入 `test-case`。
+- 登录 -> 创建 -> 查询等跨接口流程写入 `test-scenario`。
+- 本插件默认生成单接口 `test-case`，不要把 test-scenario 的步骤结构写进 test-case。
+- 第一版不默认生成 XMind、Markdown 或仓库内自动化测试代码。
 
-## 2. 生成顺序
+## 2. 场景组织
 
-- 先主流程，再关键异常与必要边界。
-- 每个接口至少保留一个正向主场景，覆盖主流程成功路径。
-- 关键异常优先来自 controller/service 中已明确存在的错误分支、状态判断、资源不存在、权限不满足、幂等限制、统一失败返回等语义。
-- 边界只补业务上有意义且代码中有依据的部分，不机械穷举字段校验。
+- 按业务链路组织，不按字段清单平铺。
+- 先从 controller 确认参数与返回，再从 service 提取主流程、状态分支和失败兜底。
+- 每个接口至少有一个正向主场景。
+- 只补代码中有明确依据的异常和边界。
+- 使用业务中文命名 `<接口或场景名>-<验证点>`。
 
-## 3. 场景命名
+## 3. 最低断言
 
-- 使用业务中文描述场景。
-- 不直接使用代码变量名、结构体名、方法名充当场景名。
-- 命名建议采用 `<接口或场景名>-<验证点>`。
+正向主场景不能只验证 HTTP 200，至少覆盖：
 
-## 4. 输出边界
+1. 成功语义，例如 `$.errNo == 0`。
+2. 一个行为或结构结果，例如分页值、排序、状态变化、总数关系、数组长度或关键字段存在。
 
-- 第一版只输出 Apifox 测试用例，不默认输出 XMind/Markdown，不默认生成仓库内自动化测试代码。
-- 默认将测试写入 Apifox 测试分类。
-- 若未拿到已识别或已写入的接口基础，不直接编造测试结果；先补齐接口基础再继续。
-- 测试用例若需要在界面中清楚展示请求路径，应显式写入接口真实 `apiPath`，不要默认让 `path` 为空。
+常规断言优先使用 `type: assertion`：
 
-## 4.1 真实工具映射
+- 状态码：`subject=httpCode`
+- JSON 字段：`subject=responseJson`
+- 文本包含：`subject=responseText`
+- 相等比较：`comparison=equal`
 
-优先使用以下 Apifox MCP 工具：
+复杂数组筛选、条件计算或二次请求才使用 `customScript`。
 
-- 接口确认：`getStructureInfo`、`getHttpEndpoint`、`readEntityDetails`
-- 测试列表：`listTestCases`
-- 测试详情：`getTestCase`
-- 创建测试：`createTestCase`
-- 更新测试：`updateTestCase`
-- 删除测试：`deleteTestCase`
+## 4. CLI 创建流程
 
-若测试生成还依赖环境前缀判断，再走：`listOpenApiEndpoints -> getOpenApiDetails -> executeOpenApi`。
+```bash
+apifox endpoint get <endpointId> --project <projectId> --branch <branch>
+apifox test-case category --project <projectId> --branch <branch>
+apifox test-case list --project <projectId> --branch <branch> \
+  --endpoint <endpointId> --page-size 500
+apifox cli-schema get test-case-create
+apifox cli-schema validate test-case-create --file <case.json>
+apifox test-case create --project <projectId> --branch <branch> --file <case.json>
+apifox test-case get <caseId> --project <projectId> --branch <branch>
+```
 
-## 5. 最低覆盖要求
+- `categoryId` 必须来自 `test-case category`，不能使用猜测值。
+- `apiDetailId` 绑定真实 endpoint。
+- `path` 显式使用 endpoint 的真实 `apifoxPath`。
+- `requestBody.data` 必须是字符串。
+- processor 使用 `{id,type,data,defaultEnable,enable}` 的当前 schema 结构。
 
-每个接口至少满足：
+## 5. 更新流程
 
-1. 一个正向主场景。
-2. 若代码链路中存在明确异常分支，补对应关键异常场景。
-3. 若存在必要的失败兜底语义，补最小但有效的兜底场景。
+更新前必须 `get` 完整测试用例；基于完整结构修改并用 `test-case-update` schema 校验。update 不是 JSON Patch，不会自动合并 `preProcessors` 或 `postProcessors`。
 
-其中正向主场景默认不能只验证 `HTTP 200`，至少应覆盖三层：
+## 6. 运行验证
 
-- 成功断言：如 `errNo=0`
-- 行为断言：如分页、筛选、排序、状态切换、字段生效
-- 结构断言：如数组长度、总数关系、关键字段存在或格式正确
+创建或更新后至少执行一次 `test-case run`，建议显式指定环境并生成临时 JSON 报告。
 
-若通过 Apifox MCP 写入后置断言，优先使用 UI 可识别的标准 `type: assertion` 结构，不要使用仅后端可存、前端显示为空白项的非标准 `type: assert` 结构。
+验证失败时分别判断：
 
-## 6. 禁止事项
+- endpoint 定义是否正确
+- 环境模块地址是否正确
+- 请求参数/Body 是否有效
+- 业务响应是否符合预期
+- assertion 或 customScript 是否写错
 
-- 不按字段清单平铺大量测试点。
-- 不为了看起来完整而补写代码中没有依据的异常或边界。
-- 不在首版默认产出 Apifox 之外的中间文档或自动化测试代码。
+不要因为 schema 校验和回读成功就宣称测试可运行。

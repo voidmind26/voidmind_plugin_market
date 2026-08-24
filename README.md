@@ -10,7 +10,7 @@
 ├── .agents/
 │   └── plugins/marketplace.json # Codex repo-local 插件市场清单
 ├── plugins/                   # 插件目录，每个子目录为一个独立插件
-│   ├── apifox-codegen-plugin/      # Apifox 接口文档与测试用例生成
+│   ├── apifox-codegen-plugin/      # 基于 Apifox CLI 的接口与测试生成
 │   ├── backend-construct-plugin/   # Go 后端代码规范与实现
 │   ├── betterpowers/               # 优化版 superpowers 工作流技能
 │   ├── code-index-plugin/          # 本地代码索引 MCP 插件
@@ -26,7 +26,7 @@
 
 | 插件 | 版本 | 说明 |
 |------|------|------|
-| [apifox-codegen-plugin](plugins/apifox-codegen-plugin/) | 0.1.1 | 从 Go Web 代码生成 Apifox 接口文档与场景化测试用例 |
+| [apifox-codegen-plugin](plugins/apifox-codegen-plugin/) | 0.1.1 | 通过官方 Apifox CLI 从 Go Web 代码生成接口文档与场景化测试用例 |
 | [backend-construct-plugin](plugins/backend-construct-plugin/) | 0.3.0 | 按项目约定指导 Go 后端代码生成、修改与验证 |
 | [betterpowers](plugins/betterpowers/) | 5.1.5 | 优化版 superpowers，包含多项开发技能、钩子与工作流 |
 | [code-index-plugin](plugins/code-index-plugin/) | 0.2.0 | 使用静态索引发现候选，并通过多 workspace gopls MCP 路由确认 Go 语义 |

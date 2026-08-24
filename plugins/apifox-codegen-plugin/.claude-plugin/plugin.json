@@ -1,7 +1,7 @@
 {
   "name": "apifox-codegen-plugin",
   "version": "0.1.1",
-  "description": "从 Go Web 代码生成 Apifox 接口文档与场景化测试用例的统一插件",
+  "description": "通过官方 Apifox CLI 从 Go Web 代码生成接口文档与场景化测试用例",
   "author": {
     "name": "voidmind",
     "email": "voidmind@zuoyebang.cc"
