@@ -53,7 +53,16 @@ def test_mcp_entry_builds_frontend_before_binary() -> None:
     mcp = json.loads((root / ".mcp.json").read_text())
     args = " ".join(mcp["mcpServers"]["gateway-platform"]["args"])
     assert "./build.sh" in args
+    assert 'HTTP_BIN="./bin/gateway-platform-http"' in args
     assert "go build -o" not in args
+
+
+def test_build_script_creates_dedicated_http_binary() -> None:
+    root = Path(__file__).resolve().parents[1]
+    content = (root / "build.sh").read_text()
+    assert 'bin/gateway-platform-mcp' in content
+    assert 'bin/gateway-platform-http' in content
+    assert 'internal/buildinfo.Version' in content
 
 
 def test_mcp_entry_runs_from_plugin_root() -> None:
@@ -61,5 +70,7 @@ def test_mcp_entry_runs_from_plugin_root() -> None:
 
     root = Path(__file__).resolve().parents[1]
     mcp = json.loads((root / ".mcp.json").read_text())
-    args = " ".join(mcp["mcpServers"]["gateway-platform"]["args"])
-    assert 'cd "$CLAUDE_PLUGIN_ROOT";' in args
+    server = mcp["mcpServers"]["gateway-platform"]
+    args = " ".join(server["args"])
+    assert server["cwd"] == "."
+    assert "CLAUDE_PLUGIN_ROOT" not in args

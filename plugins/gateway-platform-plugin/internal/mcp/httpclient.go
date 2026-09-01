@@ -35,6 +35,16 @@ type ReferenceReport struct {
 	UnusedKeys  []string `json:"unused_keys"`
 }
 
+type HealthStatus struct {
+	OK               bool   `json:"ok"`
+	DataDir          string `json:"data_dir"`
+	DatabasePath     string `json:"database_path"`
+	DatabaseWritable bool   `json:"database_writable"`
+	PID              int    `json:"pid"`
+	ExecutablePath   string `json:"executable_path"`
+	Version          string `json:"version"`
+}
+
 func NewClient(baseURL string, httpClient *http.Client) *Client {
 	if httpClient == nil {
 		httpClient = &http.Client{Timeout: 2 * time.Second}
@@ -42,22 +52,28 @@ func NewClient(baseURL string, httpClient *http.Client) *Client {
 	return &Client{baseURL: strings.TrimRight(baseURL, "/"), http: httpClient}
 }
 
-func (c *Client) HealthCheck() (bool, error) {
+func (c *Client) Health() (*HealthStatus, error) {
 	resp, err := c.http.Get(c.baseURL + "/api/health")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var status HealthStatus
+	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return &status, fmt.Errorf("health check failed: %s", resp.Status)
+	}
+	return &status, nil
+}
+
+func (c *Client) HealthCheck() (bool, error) {
+	status, err := c.Health()
 	if err != nil {
 		return false, err
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("health check failed: %s", resp.Status)
-	}
-	var body struct {
-		OK bool `json:"ok"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		return false, err
-	}
-	return body.OK, nil
+	return status.OK && status.DatabaseWritable && status.DataDir != "", nil
 }
 
 func (c *Client) ListKeys() ([]Key, error) {

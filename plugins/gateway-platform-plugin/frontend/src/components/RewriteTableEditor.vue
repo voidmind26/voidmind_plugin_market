@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { createRewrite, deleteRewrite, listKeys, listRewrites, updateRewrite } from '../api/client'
+import { apiErrorMessage, createRewrite, deleteRewrite, listKeys, listRewrites, updateRewrite } from '../api/client'
 
 const props = defineProps<{
   routeId?: number
@@ -119,8 +119,8 @@ const addRewrite = async () => {
     items.push(next)
     editingId.value = next.id
     ElMessage.success('注入规则已新增')
-  } catch {
-    ElMessage.error('新增注入规则失败')
+  } catch (error) {
+    ElMessage.error(`新增注入规则失败：${apiErrorMessage(error, '未知错误')}`)
   }
 }
 
@@ -150,8 +150,8 @@ const saveRewrite = async (row: any) => {
     hydratePreset(row)
     editingId.value = null
     ElMessage.success('注入规则已更新')
-  } catch {
-    ElMessage.error('更新注入规则失败')
+  } catch (error) {
+    ElMessage.error(`更新注入规则失败：${apiErrorMessage(error, '未知错误')}`)
   }
 }
 
@@ -162,8 +162,8 @@ const removeRewrite = async (row: any) => {
     const index = items.findIndex((item) => item.id === row.id)
     if (index >= 0) items.splice(index, 1)
     ElMessage.success('注入规则已删除')
-  } catch {
-    ElMessage.error('删除注入规则失败')
+  } catch (error) {
+    ElMessage.error(`删除注入规则失败：${apiErrorMessage(error, '未知错误')}`)
   }
 }
 

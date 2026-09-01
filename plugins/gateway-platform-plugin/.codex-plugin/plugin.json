@@ -1,6 +1,6 @@
 {
   "name": "gateway-platform-plugin",
-  "version": "1.0.1",
+  "version": "1.0.1+codex.20260901085033",
   "description": "本地 HTTP MCP 网关平台插件，提供 route、secret、动态注入与 Web Console。",
   "author": {
     "name": "voidmind",

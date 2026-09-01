@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, reactive, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { createRoute, updateRoute } from '../api/client'
+import { apiErrorMessage, createRoute, updateRoute } from '../api/client'
 import DrawerShell from './DrawerShell.vue'
 import RewriteTableEditor from './RewriteTableEditor.vue'
 
@@ -22,6 +22,7 @@ const form = reactive({
   timeout_ms: 30000,
   description: '',
 })
+const saving = ref(false)
 
 const isEdit = computed(() => !!(props.modelValue?.id ?? props.modelValue?.ID))
 const routeId = computed(() => props.modelValue?.id ?? props.modelValue?.ID)
@@ -42,9 +43,13 @@ watch(
 const close = () => emit('update:visible', false)
 
 const submit = async () => {
+  if (saving.value) return
+
+  const wasEdit = isEdit.value
+  saving.value = true
   try {
     let route
-    if (isEdit.value) {
+    if (wasEdit) {
       const { data } = await updateRoute(routeId.value, form)
       route = data
       ElMessage.success('Route 路由已更新')
@@ -54,9 +59,11 @@ const submit = async () => {
       ElMessage.success('Route 路由已创建')
     }
     emit('saved', route)
-    if (isEdit.value) close()
+    if (wasEdit) close()
   } catch (error) {
-    ElMessage.error('保存 Route 路由失败')
+    ElMessage.error(`保存 Route 路由失败：${apiErrorMessage(error, '未知错误')}`)
+  } finally {
+    saving.value = false
   }
 }
 </script>
@@ -121,7 +128,7 @@ const submit = async () => {
         <div class="gp-muted">保存 Route 后会刷新列表；Rewrite 可在当前弹出页继续维护。</div>
         <div style="display:flex;gap:10px">
           <el-button class="gp-soft-button" @click="close">取消</el-button>
-          <el-button class="gp-primary-button" @click="submit">保存 Route</el-button>
+          <el-button class="gp-primary-button" :loading="saving" @click="submit">保存 Route</el-button>
         </div>
       </div>
     </template>

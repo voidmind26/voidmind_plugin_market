@@ -3,8 +3,8 @@ package mcp
 import "context"
 
 func EnsurePlatformAtStartup(ctx context.Context, runtime Runtime) error {
-	if runtime.Start == nil {
+	if runtime.Client == nil {
 		return nil
 	}
-	return runtime.Start(ctx)
+	return runtime.EnsurePlatform(ctx)
 }

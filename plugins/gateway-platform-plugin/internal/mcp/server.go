@@ -42,11 +42,18 @@ func (s *ToolServer) Health(ctx context.Context) (map[string]any, error) {
 			return nil, err
 		}
 	}
-	ok, err := s.client.HealthCheck()
+	status, err := s.client.Health()
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"ok": ok, "console_url": s.consoleURL}, nil
+	return map[string]any{
+		"ok":                status.OK,
+		"console_url":       s.consoleURL,
+		"data_dir":          status.DataDir,
+		"database_path":     status.DatabasePath,
+		"database_writable": status.DatabaseWritable,
+		"version":           status.Version,
+	}, nil
 }
 
 func registerHealthTool(server *mcpserver.MCPServer, tools *ToolServer) {

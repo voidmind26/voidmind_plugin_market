@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { createKey, updateKey } from '../api/client'
+import { apiErrorMessage, createKey, updateKey } from '../api/client'
 import DrawerShell from './DrawerShell.vue'
 
 const props = defineProps<{
@@ -47,7 +47,7 @@ const submit = async () => {
     emit('saved')
     close()
   } catch (error) {
-    ElMessage.error('保存 Key 凭据失败')
+    ElMessage.error(`保存 Key 凭据失败：${apiErrorMessage(error, '未知错误')}`)
   }
 }
 </script>

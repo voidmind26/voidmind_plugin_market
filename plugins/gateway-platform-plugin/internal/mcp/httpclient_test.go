@@ -12,7 +12,7 @@ func TestClientHealthCheck(t *testing.T) {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"ok":true}`))
+		_, _ = w.Write([]byte(`{"ok":true,"data_dir":"/tmp/gateway","database_path":"/tmp/gateway/gateway-platform.db","database_writable":true}`))
 	}))
 	defer api.Close()
 
@@ -23,6 +23,23 @@ func TestClientHealthCheck(t *testing.T) {
 	}
 	if !ok {
 		t.Fatal("expected health check to be true")
+	}
+}
+
+func TestClientHealthCheckRejectsLegacyResponse(t *testing.T) {
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	defer api.Close()
+
+	client := NewClient(api.URL, api.Client())
+	ok, err := client.HealthCheck()
+	if err != nil {
+		t.Fatalf("HealthCheck returned error: %v", err)
+	}
+	if ok {
+		t.Fatal("expected legacy health response without writable data directory to be rejected")
 	}
 }
 

@@ -2,6 +2,15 @@
 
 本文面向 `gateway-platform-plugin` 的日常使用者，重点说明如何通过 Web Console 配置本地路由、凭据 Key 和请求注入规则。
 
+## 运行架构
+
+当前 Go 重写版本由两部分组成：
+
+- `server/`：Gin HTTP 网关、SQLite 持久化、配置 API 和内嵌前端资源。
+- `frontend/`：Vue 3 Web Console，构建结果会复制到 `server/router/frontend_dist/`。
+
+构建流程会分别生成 `bin/gateway-platform-mcp` 和 `bin/gateway-platform-http`。MCP 进程负责检查并启动独立 HTTP 程序，Web Console 和 `/gateway/<route>` 转发入口统一由 `127.0.0.1:18787` 提供。
+
 ## 入口地址
 
 启动插件后，在浏览器打开：
@@ -14,6 +23,27 @@ http://127.0.0.1:18787/app
 
 ```text
 http://127.0.0.1:18787/api/health
+```
+
+## 本地数据目录
+
+Gateway Platform 的持久化数据和 HTTP 服务日志统一保存在以下可见目录：
+
+```text
+~/CodexData/gateway-platform-plugin/
+├── gateway-platform.db
+└── gateway-platform-http.log
+```
+
+- 该目录不位于插件安装缓存中，插件升级、重装或 cachebuster 更新不会再删除数据库。
+- 目录权限固定为 `0700`，数据库和日志文件使用 `0600`，避免 Key 凭据被其他本机用户读取。
+- 首次启动新版本时，如果当前插件目录存在旧版 `gateway-platform.db`，会自动迁移；目标目录已有数据库时不会覆盖。
+- Dashboard 会显示实际数据目录以及 `READ / WRITE` 状态；`/api/health` 也会返回数据目录、数据库可写状态、插件版本、HTTP 进程 PID 和可执行文件路径，供 MCP 在插件升级后识别并接管过期实例。旧任务检测到更新版本后会直接复用，避免把 HTTP 服务降级。
+
+如需显式更改位置，可在启动 Codex 前设置绝对路径：
+
+```bash
+export GATEWAY_PLATFORM_DATA_DIR=/your/visible/path/gateway-platform-plugin
 ```
 
 Web Console 主要包含三个配置页面：

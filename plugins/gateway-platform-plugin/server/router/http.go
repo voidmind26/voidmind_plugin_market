@@ -2,7 +2,10 @@ package router
 
 import (
 	"net/http"
+	"os"
 
+	"gateway-platform-plugin/internal/buildinfo"
+	"gateway-platform-plugin/internal/platformdata"
 	"gateway-platform-plugin/server/controllers"
 	"gateway-platform-plugin/server/helpers"
 
@@ -12,7 +15,32 @@ import (
 func NewRouter(app *helpers.App) *gin.Engine {
 	r := gin.Default()
 	r.GET("/api/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"ok": true})
+		writeErr := platformdata.CheckWritable(app.DataDir)
+		if writeErr == nil {
+			writeErr = platformdata.CheckDatabaseWritable(c.Request.Context(), app.DB)
+		}
+		executablePath, executableErr := os.Executable()
+		body := gin.H{
+			"ok":                writeErr == nil,
+			"data_dir":          app.DataDir,
+			"database_path":     app.DatabasePath,
+			"database_writable": writeErr == nil,
+			"pid":               os.Getpid(),
+			"executable_path":   executablePath,
+			"version":           buildinfo.Version,
+		}
+		if executableErr != nil {
+			body["ok"] = false
+			body["error"] = executableErr.Error()
+			c.JSON(http.StatusServiceUnavailable, body)
+			return
+		}
+		if writeErr != nil {
+			body["error"] = writeErr.Error()
+			c.JSON(http.StatusServiceUnavailable, body)
+			return
+		}
+		c.JSON(http.StatusOK, body)
 	})
 	r.GET("/api/routes", controllers.ListRoutes(app))
 	r.POST("/api/routes", controllers.CreateRoute(app))

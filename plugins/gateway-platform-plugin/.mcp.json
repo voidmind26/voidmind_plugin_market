@@ -5,7 +5,7 @@
       "command": "bash",
       "args": [
         "-lc",
-        "BIN=\"./bin/gateway-platform-mcp\"; if [ ! -x \"$BIN\" ] || [ ./build.sh -nt \"$BIN\" ] || [ ./go.mod -nt \"$BIN\" ] || [ ./go.sum -nt \"$BIN\" ] || [ ./main.go -nt \"$BIN\" ] || find ./cmd ./internal ./server ./frontend -type f -newer \"$BIN\" -print -quit | grep -q .; then bash ./build.sh; fi; exec \"$BIN\""
+        "BIN=\"./bin/gateway-platform-mcp\"; HTTP_BIN=\"./bin/gateway-platform-http\"; if [ ! -x \"$BIN\" ] || [ ! -x \"$HTTP_BIN\" ] || [ ./build.sh -nt \"$BIN\" ] || [ ./go.mod -nt \"$BIN\" ] || [ ./go.sum -nt \"$BIN\" ] || [ ./main.go -nt \"$BIN\" ] || find ./cmd ./internal ./server ./frontend -type f -newer \"$BIN\" -print -quit | grep -q .; then bash ./build.sh; fi; exec \"$BIN\""
       ]
     }
   }

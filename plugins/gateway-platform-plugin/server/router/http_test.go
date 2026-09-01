@@ -1,6 +1,7 @@
 package router
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,14 +14,19 @@ import (
 
 func newTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
-	db, err := sqlite.OpenTestDB(t.TempDir())
+	dataDir := t.TempDir()
+	db, err := sqlite.OpenTestDB(dataDir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := sqlite.InitSchema(db); err != nil {
 		t.Fatal(err)
 	}
-	return httptest.NewServer(NewRouter(&helpers.App{DB: db}))
+	return httptest.NewServer(NewRouter(&helpers.App{
+		DB:           db,
+		DataDir:      dataDir,
+		DatabasePath: sqlite.DataSource(dataDir),
+	}))
 }
 
 func httpGet(t *testing.T, url string) *http.Response {
@@ -91,6 +97,66 @@ func createRouteAndKeyFixtures(t *testing.T, server *httptest.Server) {
 	t.Helper()
 	assertStatus(t, httpPostJSON(t, server.URL+"/api/routes", `{"name":"ship","enabled":true,"local_path":"/ship","upstream_url":"https://ship.example/mcp","timeout_ms":30000,"description":"ship"}`), http.StatusCreated)
 	assertStatus(t, httpPostJSON(t, server.URL+"/api/keys", `{"name":"ips-token","value":"abc","description":"ips"}`), http.StatusCreated)
+}
+
+func TestHealthReportsWritablePersistentDataDirectory(t *testing.T) {
+	server := newTestServer(t)
+	defer server.Close()
+
+	resp := httpGet(t, server.URL+"/api/health")
+	assertStatus(t, resp, http.StatusOK)
+	defer resp.Body.Close()
+	var status struct {
+		DataDir          string `json:"data_dir"`
+		DatabasePath     string `json:"database_path"`
+		DatabaseWritable bool   `json:"database_writable"`
+		PID              int    `json:"pid"`
+		ExecutablePath   string `json:"executable_path"`
+		Version          string `json:"version"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status.DataDir == "" || status.DatabasePath == "" {
+		t.Fatalf("expected persistent data paths, got %#v", status)
+	}
+	if !status.DatabaseWritable {
+		t.Fatal("expected database to be writable")
+	}
+	if status.PID <= 0 || status.ExecutablePath == "" || status.Version == "" {
+		t.Fatalf("expected process identity, got %#v", status)
+	}
+}
+
+func TestHealthRejectsReadOnlyDatabase(t *testing.T) {
+	dataDir := t.TempDir()
+	databasePath := sqlite.DataSource(dataDir)
+	writable, err := sqlite.Open(databasePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := sqlite.InitSchema(writable); err != nil {
+		t.Fatal(err)
+	}
+	if err := writable.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	readOnly, err := sqlite.Open("file:" + databasePath + "?mode=ro")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer readOnly.Close()
+	server := httptest.NewServer(NewRouter(&helpers.App{
+		DB:           readOnly,
+		DataDir:      dataDir,
+		DatabasePath: databasePath,
+	}))
+	defer server.Close()
+
+	resp := httpGet(t, server.URL+"/api/health")
+	assertStatus(t, resp, http.StatusServiceUnavailable)
+	assertBodyContains(t, resp, `"database_writable":false`)
 }
 
 func TestRoutesCRUD(t *testing.T) {

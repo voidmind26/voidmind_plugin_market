@@ -22,4 +22,7 @@ cp -R "$FRONTEND/dist/." "$EMBED_DIST/"
 cd "$ROOT"
 GOWORK=off go test ./server/...
 mkdir -p "$ROOT/bin"
-GOWORK=off go build -o "$ROOT/bin/gateway-platform-mcp" ./cmd/gateway-platform-mcp
+PLUGIN_VERSION="$(node -e 'const fs = require("fs"); console.log(JSON.parse(fs.readFileSync(".codex-plugin/plugin.json", "utf8")).version)')"
+LDFLAGS="-X gateway-platform-plugin/internal/buildinfo.Version=$PLUGIN_VERSION"
+GOWORK=off go build -ldflags "$LDFLAGS" -o "$ROOT/bin/gateway-platform-mcp" ./cmd/gateway-platform-mcp
+GOWORK=off go build -ldflags "$LDFLAGS" -o "$ROOT/bin/gateway-platform-http" .

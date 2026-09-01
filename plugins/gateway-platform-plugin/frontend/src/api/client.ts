@@ -4,6 +4,11 @@ export const api = axios.create({
   baseURL: '/api',
 })
 
+export const getHealth = () => api.get('/health')
+
+export const apiErrorMessage = (error: any, fallback: string) =>
+  error?.response?.data?.error || error?.message || fallback
+
 export const listRoutes = () => api.get('/routes')
 export const getRoute = (id: number) => api.get(`/routes/${id}`)
 export const createRoute = (payload: any) => api.post('/routes', payload)

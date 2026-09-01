@@ -25,7 +25,7 @@ func TestHealthToolUsesHTTPAPI(t *testing.T) {
 	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/api/health":
-			_, _ = w.Write([]byte(`{"ok":true}`))
+			_, _ = w.Write([]byte(`{"ok":true,"data_dir":"/tmp/gateway","database_path":"/tmp/gateway/gateway-platform.db","database_writable":true}`))
 		default:
 			http.NotFound(w, r)
 		}
@@ -55,7 +55,7 @@ func TestHealthEnsuresPlatformBeforeCheckingHealth(t *testing.T) {
 			http.Error(w, "booting", http.StatusServiceUnavailable)
 			return
 		}
-		_, _ = w.Write([]byte(`{"ok":true}`))
+		_, _ = w.Write([]byte(`{"ok":true,"data_dir":"/tmp/gateway","database_path":"/tmp/gateway/gateway-platform.db","database_writable":true}`))
 	}))
 	defer api.Close()
 

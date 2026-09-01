@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import DataStorageStatus from '../components/DataStorageStatus.vue'
 
 const router = useRouter()
 const openRoutes = () => router.push('/routes')
+const openCreateRoute = () => router.push({ path: '/routes', query: { create: '1' } })
 const openKeys = () => router.push('/keys')
 const openReferences = () => router.push('/references')
 
@@ -18,7 +20,7 @@ const steps = [
     title: '2. 新建 Route 路由',
     desc: '为目标服务创建一条本地转发入口。',
     code: '/gateway/ship',
-    action: openRoutes,
+    action: openCreateRoute,
     button: '去新建 Route',
   },
   {
@@ -62,6 +64,8 @@ const steps = [
       </div>
     </div>
 
+    <DataStorageStatus />
+
     <el-row :gutter="18">
       <el-col :span="10">
         <el-card class="gp-panel-card" style="height: 100%">
@@ -72,7 +76,7 @@ const steps = [
               现在可以在同一个控制台中完成本地网关的 Key 凭据管理、Route 路由管理、Rewrite 注入规则绑定和引用修复。
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
-              <el-button class="gp-primary-button" @click="openRoutes">新建 Route 路由</el-button>
+              <el-button class="gp-primary-button" @click="openCreateRoute">新建 Route 路由</el-button>
               <el-button class="gp-soft-button" @click="openKeys">新建 Key 凭据</el-button>
               <el-button class="gp-soft-button" @click="openReferences">查看 References 引用关系</el-button>
             </div>

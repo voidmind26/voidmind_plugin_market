@@ -53,26 +53,11 @@ const handleSaved = async (savedRoute?: any) => {
   }
 }
 
-watch(
-  () => route.query,
-  () => {
-    const routeName = route.query.route as string | undefined
-    const keyName = route.query.key as string | undefined
-    if (routeName) {
-      const target = routes.value.find((item) => (item.name ?? item.Name) === routeName)
-      if (target) {
-        handleEdit(target)
-        return
-      }
-    }
-    if (keyName && !routeName) {
-      handleCreate({ description: `Bind key: ${keyName}`, local_path: `/gateway-${keyName}` })
-    }
-  },
-)
-
-onMounted(async () => {
-  await load()
+const applyRouteQuery = () => {
+  if (route.query.create === '1') {
+    handleCreate()
+    return
+  }
   const routeName = route.query.route as string | undefined
   const keyName = route.query.key as string | undefined
   if (routeName) {
@@ -81,6 +66,13 @@ onMounted(async () => {
   } else if (keyName) {
     handleCreate({ description: `Bind key: ${keyName}`, local_path: `/gateway-${keyName}` })
   }
+}
+
+watch(() => route.query, applyRouteQuery)
+
+onMounted(async () => {
+  await load()
+  applyRouteQuery()
 })
 </script>
 
